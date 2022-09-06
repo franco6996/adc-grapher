@@ -56,13 +56,13 @@ void setup() {
   surface.setTitle("ADC Grapher (v" + swVersion + ")" ); 
   
   //Load images for program
-  imgConfig = loadImage("gear.png");
+  imgConfig = loadImage("data/gear.png");
   imgConfig.filter(GRAY);
-  imgDelete = loadImage("delete.png");
+  imgDelete = loadImage("data/delete.png");
   imgDelete.filter(GRAY);
-  imgExport = loadImage("export.png");
+  imgExport = loadImage("data/export.png");
   imgExport.filter(GRAY);
-  imgAdd = loadImage("add.png");
+  imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
   
   // Check for new Updates
