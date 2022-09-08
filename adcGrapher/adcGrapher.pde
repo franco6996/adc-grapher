@@ -14,10 +14,7 @@ GPlot plot1;
 DataFile[] dataFiles;
 final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the same time
 public int dataFileCount;  // Counts the files alredy loaded
-String[] column_compare = { "#", "timeStamp", "0"}; // format of .csv file to compare and validated added files.
-public int seedCounter = 0;
-public float hMaxProbValue = 0;
-public boolean hNoData = false;
+public int dataPointCounter = 0;
 public boolean firstTimeStarted = true;
 
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
@@ -32,7 +29,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.01";
+final String swVersion = "0.02";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd;
@@ -49,7 +46,7 @@ void setup() {
   randomSeed(99);
   
   // Set title bar and icon for Windows app
-  PImage titlebaricon = loadImage("icon.png"); 
+  PImage titlebaricon = loadImage("data/icon.png"); 
   if (titlebaricon != null){
     surface.setIcon(titlebaricon);
   }
@@ -72,7 +69,7 @@ void setup() {
   dataFiles = new DataFile[dataFilesMax];
   dataFileCount = 0;
   
-  
+  plotMode = 0;
   
   
   noLoop();
@@ -176,7 +173,7 @@ void plot1SetConfig() {
   plot1.setDim( plotToX*2-plotFromX+120, plotToY-plotFromY);
   
   // Set the plot title and the axis labels
-  plot1.setTitleText("Seeds Timeline Representation");
+  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
   plot1.getXAxis().setAxisLabelText("Time [ms]");
   plot1.getYAxis().setAxisLabelText("ADC raw value");
   
@@ -209,6 +206,9 @@ void loadData(File selection) {
   // Add Layers of the new file selected
   dataFiles[dataFileCount].plotData( plot1 );
   
+  // Set the plot title
+  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
+  
   // Prepare for the next file
   dataFileCount++;
   
@@ -216,7 +216,7 @@ void loadData(File selection) {
   
   loop();
   
-  plot1.setXLim(0,20);
+  //plot1.setXLim(0,20);
   
   firstTimeStarted = false;
 }
@@ -226,8 +226,8 @@ void exportFile (int numberExport) {
   if ( dataFileCount == 0 ) return;
   
   /*  Ask what type of file to export  */
-  String[] options = {".h"};
-  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)", "Export File",
+  String[] options = {".h",".csv"};
+  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)\n-SeedAnalizer format (.csv)", "Export File",
   javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
   null, options, options[0]);
   
@@ -241,6 +241,18 @@ void exportFile (int numberExport) {
     javax.swing.JOptionPane.showMessageDialog(null, "Error exporting the file!", "Export File", javax.swing.JOptionPane.ERROR_MESSAGE);
   }
   
+}
+
+public String timeStampsFilePath;
+public boolean timeStampsFilePathLoaded;
+public void setTimeStampsFile( File selection ) {
+    if (selection == null) {
+      javax.swing.JOptionPane.showMessageDialog(null, "No file selected.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
+      loop();
+      return;
+    }
+    timeStampsFilePath = selection.getAbsolutePath();
+    timeStampsFilePathLoaded = true;
 }
 
 void deleteFile () {
