@@ -29,7 +29,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.02";
+final String swVersion = "1.0";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd;
@@ -204,7 +204,8 @@ void loadData(File selection) {
   if (dataFileCount == 0 ) plot1SetConfig();
   
   // Add Layers of the new file selected
-  dataFiles[dataFileCount].plotData( plot1 );
+  dataFiles[dataFileCount].plotData (plot1);
+  dataFiles[dataFileCount].analyzeAndPlot();
   
   // Set the plot title
   plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");

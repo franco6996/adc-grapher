@@ -5,20 +5,41 @@ class Seed {
   int[] value = new int[101];
   boolean validSeed;
   
+  private class Point {
+  int x, y;
+    Point(int x_ , int y_){
+      x = x_;
+      y = y_;
+    }
+  }
+  Point[] points = new Point[100];
+  int pointsCount = 0;
+  Point[] interestPoints = new Point[5];
+  int interestPointsCount = 0;
+  
   // Create  the Seed
-  Seed(int item_, int timeStamp_, int[] value_) {
-    item = item_;            // # of seed
-    timeStamp = timeStamp_;  // time stamp of min value of signal
-    value = value_;          /* array of 101 elements, wich contains the value of ADC every 100us.
-                                value[50] corresponds to the min of the signal */
-    
-    // if the seed contains a 0 value in the first ADC measure is invalid, it should contain the aprox DAC value
-    if ( value[0] == 0 )
-      validSeed = false;
-    else
-      validSeed = true;
+  Seed(int value_, int time_) {
+    points[pointsCount] = new Point( value_ , time_);
+    interestPoints[interestPointsCount] = points[pointsCount];
+    interestPointsCount++;
+    pointsCount++;
+    validSeed = true;
   }
   
+  void addPoint(int value_, int time_, boolean itsOfInterest) {
+    points[pointsCount] = new Point( value_ , time_);
+    
+    
+    if ( itsOfInterest ) {
+      interestPoints[interestPointsCount] = points[pointsCount];
+      interestPointsCount++;
+    }
+    
+    pointsCount++;
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////////////////////////////
   // Prepare to Display the values from one Seed
   void addLayer( String fileName_ , int dataFileIndex_) {
     
