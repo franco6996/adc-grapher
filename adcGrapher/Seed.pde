@@ -11,6 +11,13 @@ class Seed {
       x = x_;
       y = y_;
     }
+    
+    int getX() {
+      return y;
+    }
+    int getY() {
+      return x;
+    }
   }
   Point[] points = new Point[100];
   int pointsCount = 0;
@@ -26,16 +33,53 @@ class Seed {
     validSeed = true;
   }
   
-  void addPoint(int value_, int time_, boolean itsOfInterest) {
+  void addPoint(int value_, int time_) {
     points[pointsCount] = new Point( value_ , time_);
-    
-    
-    if ( itsOfInterest ) {
-      interestPoints[interestPointsCount] = points[pointsCount];
-      interestPointsCount++;
-    }
-    
     pointsCount++;
+  }
+  
+  int[] getPoint(int pointNumber_){
+    int[] rtn = new int[2];
+    rtn[0] = points[pointNumber_].getX();
+    rtn[1] = points[pointNumber_].getY();
+    return rtn;
+  }
+  
+  int getPointQuantity() {
+    return pointsCount;
+  }
+  
+  void addPointOfInterest(int value_, int time_) {
+    interestPoints[interestPointsCount] = new Point( value_ , time_);
+    interestPointsCount++;
+  }
+  
+  int[] getPointOfInterest(int pointNumber_){
+    int[] rtn = new int[2];
+    rtn[0] = interestPoints[pointNumber_].getX();
+    rtn[1] = interestPoints[pointNumber_].getY();
+    return rtn;
+  }
+  
+  int getPointOfInterestQuantity() {
+    return interestPointsCount;
+  }
+  
+  void plot (GPlot plot_) {
+    
+    GPointsArray p = new GPointsArray(pointsCount);  // points of plot
+    for ( int i = 0; i < pointsCount ; i++ ){
+      p.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +")");
+    }
+    plot_.getLayer("pulsos").addPoints(p);
+  }
+  
+  void plotInterestPoints (GPlot plot_){
+    GPointsArray p = new GPointsArray(interestPointsCount);  // points of plot
+    for ( int i = 0; i < interestPointsCount ; i++ ){
+      p.add(interestPoints[i].getX()*0.1, interestPoints[i].getY());
+    }
+    plot_.getLayer("interest").addPoints(p);
   }
   
   
