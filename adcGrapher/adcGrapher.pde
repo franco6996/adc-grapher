@@ -92,8 +92,13 @@ void draw() {
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
-      plot1.drawPoints();
-      plot1.drawLines();
+      //plot1.drawPoints();
+      plot1.getLayer("noPulso").drawPoints();
+      plot1.getLayer("pulsoDescendente").drawPoints();
+      plot1.getLayer("pulsoAscendente").drawPoints();
+      plot1.getLayer("pulsoInconsistente").drawPoints();
+      plot1.getLayer("interest").drawPoints();
+      plot1.getLayer("fondo").drawLines();
       plot1.drawLabels();
       plot1.endDraw();
       
@@ -208,8 +213,8 @@ void loadData(File selection) {
   dataFiles[dataFileCount].analyzeAndPlot();
   
   // Set the plot title
-  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
-  
+  plot1.setTitleText( dataPointCounter + " Data Points - "+ dataFiles[0].getSeedCount() + " semillas detectadas");
+  plot1.setXLim(0, dataFiles[0].getRawDataQuantity()*0.1 );
   // Prepare for the next file
   dataFileCount++;
   
@@ -300,7 +305,7 @@ void addFile() {
 
 // Pressing 'n' will bring the window to select a new file to add to the plot
 void keyReleased() {
-  switch (key) { //<>//
+  switch (key) {
     case 'N':
       if (plotMode != 0) return;
       addFile();
@@ -315,7 +320,7 @@ void keyReleased() {
 }
 
 void keyPressed() {
-  switch (key) { //<>//
+  switch (key) {
     case CODED:
       if (plotMode != 1) return;
       float[] yLim = plot1.getYLim();

@@ -1,13 +1,13 @@
 class DataFile{
   // An array of Seed objects
-  Seed[] seeds = new Seed[300];
+  Seed[] seeds = new Seed[10000];
   int seedCount = 0;
   String[] rawData;
   int[] rawDataVector;
   int rawDataQuantity;
   String fileNamePath , fileName;
   int fileIndex; // indicate the order in wich the file was added
-  float minSlope = 256, minPointValue = 0xFFFF;
+  float minSlope = 256, minPointValue = 0xFFFF, failsafe =0;
   int[] auxPoint, auxMinPoint;
   
   // For data validation
@@ -49,13 +49,20 @@ class DataFile{
     return fileName;
   }
   
+  int getRawDataQuantity() {
+    return rawDataQuantity;
+  }
+  
+  int getSeedCount () {
+    return seedCount;
+  }
   
   void analyzeAndPlot () {
     
     GPointsArray points = new GPointsArray(rawDataQuantity);
     
     int state = 0; // Estado maquina: -1>reset , 0>noPulso , 1>flancoDescendente , 2>inconsistente , 3>flancoAscendente
-    final int slopeTrigger = 7;
+    final int slopeTrigger = 10;
     Trend trend = new Trend( rawDataVector[0] ); 
     
     for (int i = 0 ; i < rawDataQuantity ; i++) {
@@ -64,6 +71,10 @@ class DataFile{
         case -1:  //reset
           minSlope = 256;
           auxPoint = null;
+          auxMinPoint = null;
+          minPointValue = 0xFFFF;
+          failsafe = 0;
+          seeds[seedCount] = null;
           state = 0;
         break;
         case 0:  //noPulso
@@ -71,10 +82,20 @@ class DataFile{
           
           /*  If i start a down flank in the signal is because i have a start of a pulse */
           if ( ( trend.getSlope() < -slopeTrigger ) && (trend.getSlopeRate()==-1) ) {
-              /*  create a new seed and save the point  */
-              seeds[seedCount] = new Seed( rawDataVector[i], i); //<>//
               //seedCount++;
               state = 1;
+              /*  create a new seed and save the point  */
+              seeds[seedCount] = new Seed( seedCount, i, rawDataVector[i], state);
+              if (seedCount == 300 ) 
+                print("\nSe alcanzó más de " + seedCount + " semillas.");
+              if (seedCount == 1000 ) 
+                print("\nSe alcanzó más de " + seedCount + " semillas.");
+              if (seedCount == 5000 ) 
+                print("\nSe alcanzó más de " + seedCount + " semillas.");
+              if (seedCount == 10000 ) {
+                print("\n\nSe alcanzó el numero máximo de semillas detectables! (" + seedCount + ")\n");
+                i = rawDataQuantity; // saltea el resto del loop para no crashear
+              } //<>//
               break;
           }
           
@@ -85,14 +106,14 @@ class DataFile{
         case 1:  //flancoDescendente
           
           /*  Add this point to the seed  */
-          seeds[seedCount].addPoint( rawDataVector[i], i );
+          seeds[seedCount].addPoint( i, rawDataVector[i], state );
           
           /*  Guardo el punto mas bajo del pulso  */
            if ( rawDataVector[i] <  minPointValue ) {
              minPointValue = rawDataVector[i];
              if ( auxMinPoint == null) auxMinPoint = new int[2];
-             auxMinPoint[0] = rawDataVector[i];
-             auxMinPoint[1] = i;
+             auxMinPoint[1] = rawDataVector[i];
+             auxMinPoint[0] = i;
            }
           
           /*  If i close to a zero slope  */
@@ -102,14 +123,23 @@ class DataFile{
         break;
         case 2:  //inconsistente
           /* Añado el punto al objeto semilla  */
-          seeds[seedCount].addPoint( rawDataVector[i], i );
+          seeds[seedCount].addPoint( i, rawDataVector[i], state );
+          
+          /*  If i stay a lot in a zero slope, reset  */
+          if ( (trend.getSlope() == 0 ) && (trend.getSlopeRate()==0) ) {
+            failsafe++;
+            if(failsafe > 5) {
+              state = -1;
+              break;
+            }
+          }
           
           /*  Guardo el punto mas bajo del pulso  */
            if ( rawDataVector[i] <  minPointValue ) {
              minPointValue = rawDataVector[i];
              if ( auxMinPoint == null) auxMinPoint = new int[2];
-             auxMinPoint[0] = rawDataVector[i];
-             auxMinPoint[1] = i;
+             auxMinPoint[1] = rawDataVector[i];
+             auxMinPoint[0] = i;
            }
           
           /*  If i pass to an ascending pulse  */
@@ -128,7 +158,7 @@ class DataFile{
            
            /*  If i pass to a descending pulse  */
           if ( (trend.getSlope() < -slopeTrigger ) && (trend.getSlopeRate()==-1) ) {
-            /*  Add the interest point  */ //<>//
+            /*  Add the interest point  */
             if (auxPoint != null) seeds[seedCount].addPointOfInterest( auxPoint[0], auxPoint[1]);
             
             /* Reseteo los buscadores del punto minimo y el que guarda el punto de interes  */
@@ -145,20 +175,20 @@ class DataFile{
            if ( trend.getSlope() < minSlope ) {
              minSlope = trend.getSlope();
              if ( auxPoint == null) auxPoint = new int[2];
-             auxPoint[0] = rawDataVector[i];
-             auxPoint[1] = i;
+             auxPoint[1] = rawDataVector[i];
+             auxPoint[0] = i;
            }
            
         break;
         case 3:  //flancoAscendente
           /*  Añado el punto al objeto semilla  */
-          seeds[seedCount].addPoint( rawDataVector[i], i);
+          seeds[seedCount].addPoint( i, rawDataVector[i], state );
           
           /*  If i get a stable signal after a upwards flank, it means that the pulse was a seed */
           if ( (trend.getSlope() < slopeTrigger) && (trend.getSlopeRate()==-1) ) {
   
-            seeds[seedCount].addPointOfInterest( rawDataVector[i], i );  // last point of the seed
-            seedCount++; //<>//
+            seeds[seedCount].addPointOfInterest( i, rawDataVector[i] );  // last point of the seed
+            seedCount++;
             state = 0;
             break;
           }
@@ -171,7 +201,9 @@ class DataFile{
     
     /*  Ploteo las semillas */
     GPointsArray p = new GPointsArray(1);
-    plot1.addLayer("pulsos",p);
+    plot1.addLayer("pulsoDescendente",p);
+    plot1.addLayer("pulsoInconsistente",p);
+    plot1.addLayer("pulsoAscendente",p);
     plot1.addLayer("interest",p);
     for ( int i = 0; i < seedCount ; i++) {
       seeds[i].plot (plot1);
@@ -182,11 +214,17 @@ class DataFile{
     
     /*  Personalizo las capas  */
     plot1.getLayer("noPulso").setFontSize(14);
-    plot1.getLayer("noPulso").setLineColor(80);
-    plot1.getLayer("noPulso").setPointColor(80);
-    plot1.getLayer("pulsos").setFontSize(14);
-    plot1.getLayer("pulsos").setLineColor(color(255,0,0));
-    plot1.getLayer("pulsos").setPointColor(color(255,0,0));
+    plot1.getLayer("noPulso").setLineColor(100);
+    plot1.getLayer("noPulso").setPointColor(100);
+    plot1.getLayer("pulsoDescendente").setFontSize(14);
+    plot1.getLayer("pulsoDescendente").setLineColor(color(255,0,0));
+    plot1.getLayer("pulsoDescendente").setPointColor(color(255,0,0));
+    plot1.getLayer("pulsoInconsistente").setFontSize(14);
+    plot1.getLayer("pulsoInconsistente").setLineColor(color(0,255,50));
+    plot1.getLayer("pulsoInconsistente").setPointColor(color(0,255,50));
+    plot1.getLayer("pulsoAscendente").setFontSize(14);
+    plot1.getLayer("pulsoAscendente").setLineColor(color(255,180,0));
+    plot1.getLayer("pulsoAscendente").setPointColor(color(255,180,0));
     plot1.getLayer("interest").setFontSize(14);
     plot1.getLayer("interest").setLineColor(color(0,0,255,200));
     plot1.getLayer("interest").setPointColor(color(0,0,255,200));
@@ -200,10 +238,10 @@ class DataFile{
     for (int i = 0; i < nPoints; i++) {
       points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +") "+layerName);
     }
-    plot1.addLayer(layerName, points);     // add points to the layer
-    plot1.getLayer(layerName).setFontSize(14);
-    plot1.getLayer(layerName).setLineColor(color(0,255,0,80));
-    plot1.getLayer(layerName).setPointColor(color(0,255,0,80));
+    plot1.addLayer("fondo", points);     // add points to the layer
+    plot1.getLayer("fondo").setFontSize(1);
+    plot1.getLayer("fondo").setLineColor(color(80,150));
+    plot1.getLayer("fondo").setPointColor(color(80,150));
   }
   
   void removeLayers (){

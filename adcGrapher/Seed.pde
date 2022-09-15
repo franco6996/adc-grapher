@@ -6,42 +6,57 @@ class Seed {
   boolean validSeed;
   
   private class Point {
-  int x, y;
-    Point(int x_ , int y_){
+  int x, y, type;
+    Point(int x_ , int y_, int type_){
       x = x_;
       y = y_;
+      type = type_;
     }
     
     int getX() {
-      return y;
-    }
-    int getY() {
       return x;
     }
+    int getY() {
+      return y;
+    }
+    int getType() {
+      return type;
+    }
   }
-  Point[] points = new Point[100];
+  Point[] points = new Point[1000];
   int pointsCount = 0;
   Point[] interestPoints = new Point[5];
   int interestPointsCount = 0;
   
   // Create  the Seed
-  Seed(int value_, int time_) {
-    points[pointsCount] = new Point( value_ , time_);
+  Seed(int item_, int value_, int time_, int type_) {
+    points[pointsCount] = new Point( value_ , time_, type_);
     interestPoints[interestPointsCount] = points[pointsCount];
     interestPointsCount++;
     pointsCount++;
+    item = item_;
     validSeed = true;
   }
   
-  void addPoint(int value_, int time_) {
-    points[pointsCount] = new Point( value_ , time_);
+  void addPoint(int value_, int time_, int type_) {
+    if (pointsCount == 10000 ) {
+      print("\n\nSe alcanzó el numero máximo de puntos de datos por semilla! (" + pointsCount + ")\n");
+      return; // no guarda el punto
+    }
+    
+    points[pointsCount] = new Point( value_ , time_, type_);
     pointsCount++;
+    
+    if (pointsCount == 100 ) 
+      print("\nSe alcanzó más de " + pointsCount + " puntos de datos en la semilla " + item); //<>//
+    
   }
   
   int[] getPoint(int pointNumber_){
-    int[] rtn = new int[2];
+    int[] rtn = new int[3];
     rtn[0] = points[pointNumber_].getX();
     rtn[1] = points[pointNumber_].getY();
+    rtn[2] = points[pointNumber_].getType();
     return rtn;
   }
   
@@ -49,15 +64,16 @@ class Seed {
     return pointsCount;
   }
   
-  void addPointOfInterest(int value_, int time_) {
-    interestPoints[interestPointsCount] = new Point( value_ , time_);
+  void addPointOfInterest(int x_, int y_) {
+    interestPoints[interestPointsCount] = new Point( x_ , y_, 0);
     interestPointsCount++;
   }
   
   int[] getPointOfInterest(int pointNumber_){
-    int[] rtn = new int[2];
+    int[] rtn = new int[3];
     rtn[0] = interestPoints[pointNumber_].getX();
     rtn[1] = interestPoints[pointNumber_].getY();
+    rtn[2] = interestPoints[pointNumber_].getType();
     return rtn;
   }
   
@@ -67,11 +83,20 @@ class Seed {
   
   void plot (GPlot plot_) {
     
-    GPointsArray p = new GPointsArray(pointsCount);  // points of plot
+    GPointsArray p1 = new GPointsArray(pointsCount);  // points of plot
+    GPointsArray p2 = new GPointsArray(pointsCount);  // points of plot
+    GPointsArray p3 = new GPointsArray(pointsCount);  // points of plot
     for ( int i = 0; i < pointsCount ; i++ ){
-      p.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +")");
+      if ( points[i].getType() == 1 )
+      p1.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
+      if ( points[i].getType() == 2 )
+      p2.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
+      if ( points[i].getType() == 3 )
+      p3.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
     }
-    plot_.getLayer("pulsos").addPoints(p);
+    plot_.getLayer("pulsoDescendente").addPoints(p1);
+    plot_.getLayer("pulsoInconsistente").addPoints(p2);
+    plot_.getLayer("pulsoAscendente").addPoints(p3);
   }
   
   void plotInterestPoints (GPlot plot_){
