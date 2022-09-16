@@ -4,13 +4,17 @@ class Seed {
   int item, timeStamp;
   int[] value = new int[101];
   boolean validSeed;
+  float rmsValue;
+  float avgValue, areaDerivada;
   
   private class Point {
   int x, y, type;
-    Point(int x_ , int y_, int type_){
+  float slope;
+    Point(int x_ , int y_, int type_, float slope_){
       x = x_;
       y = y_;
       type = type_;
+      slope = slope_;
     }
     
     int getX() {
@@ -22,6 +26,9 @@ class Seed {
     int getType() {
       return type;
     }
+    float getSlope() {
+      return slope;
+    }
   }
   Point[] points = new Point[1000];
   int pointsCount = 0;
@@ -29,22 +36,23 @@ class Seed {
   int interestPointsCount = 0;
   
   // Create  the Seed
-  Seed(int item_, int value_, int time_, int type_) {
-    points[pointsCount] = new Point( value_ , time_, type_);
+  Seed(int item_, int time_, int value_, int type_, float slope_) {
+    points[pointsCount] = new Point( time_ , value_, type_, slope_);
     interestPoints[interestPointsCount] = points[pointsCount];
     interestPointsCount++;
     pointsCount++;
     item = item_;
+    timeStamp = time_;
     validSeed = true;
   }
   
-  void addPoint(int value_, int time_, int type_) {
+  void addPoint(int time_, int value_, int type_, float slope_) {
     if (pointsCount == 10000 ) {
       print("\n\nSe alcanzó el numero máximo de puntos de datos por semilla! (" + pointsCount + ")\n");
       return; // no guarda el punto
     }
     
-    points[pointsCount] = new Point( value_ , time_, type_);
+    points[pointsCount] = new Point( time_ , value_, type_, slope_);
     pointsCount++;
     
     if (pointsCount == 100 ) 
@@ -65,7 +73,7 @@ class Seed {
   }
   
   void addPointOfInterest(int x_, int y_) {
-    interestPoints[interestPointsCount] = new Point( x_ , y_, 0);
+    interestPoints[interestPointsCount] = new Point( x_ , y_, 0, 0);
     interestPointsCount++;
   }
   
@@ -86,17 +94,25 @@ class Seed {
     GPointsArray p1 = new GPointsArray(pointsCount);  // points of plot
     GPointsArray p2 = new GPointsArray(pointsCount);  // points of plot
     GPointsArray p3 = new GPointsArray(pointsCount);  // points of plot
+    GPointsArray pd = new GPointsArray(pointsCount);  // points of plot
     for ( int i = 0; i < pointsCount ; i++ ){
       if ( points[i].getType() == 1 )
-      p1.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
+      p1.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item + " s:"+  points[i].getSlope() );
       if ( points[i].getType() == 2 )
-      p2.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
+      p2.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item + " s:"+  points[i].getSlope() );
       if ( points[i].getType() == 3 )
-      p3.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item);
+      p3.add(points[i].getX()*0.1, points[i].getY(), "("+ points[i].getX()*0.1 +","+ points[i].getY() +") Seed #" + item + " s:"+  points[i].getSlope() );
+      
+      pd.add(points[i].getX()*0.1, points[i].getSlope(), "(" + points[i].getSlope() + ")" );
     }
     plot_.getLayer("pulsoDescendente").addPoints(p1);
     plot_.getLayer("pulsoInconsistente").addPoints(p2);
     plot_.getLayer("pulsoAscendente").addPoints(p3);
+    
+    plot2.addLayer( str(item) , pd);
+    plot2.getLayer(str(item)).setFontSize(14);
+    plot2.getLayer(str(item)).setLineColor( color(255,0,200,80) );
+    plot2.getLayer(str(item)).setPointColor( color(255,0,200,80) );
   }
   
   void plotInterestPoints (GPlot plot_){
@@ -107,6 +123,44 @@ class Seed {
     plot_.getLayer("interest").addPoints(p);
   }
   
+  
+  void calcRMSValue() {
+    float sum = 0, rms = 0;
+    
+    /*  Sumatoria de los cuadrados de todos los puntos  */
+    for( int i = 0; i < pointsCount ; i++) {
+      sum += pow( points[i].getY(), 2 );
+    }
+    sum /= pointsCount;
+    
+    rms = sqrt( sum );
+    
+    rmsValue = rms;
+    
+  }
+  
+  void calcAvgValue() {
+    float sum = 0, avg = 0;
+    
+    /*  Sumatoria de los cuadrados de todos los puntos  */
+    for( int i = 0; i < pointsCount ; i++) {
+      sum += points[i].getY();
+    }
+    avg = sum / pointsCount;
+    
+    avgValue = avg;
+  }
+  
+  void calcAreaDerivada () {
+    float area = 0;
+    
+    /*  Sumatoria de los cuadrados de todos los puntos  */
+    for( int i = 0; i < pointsCount-1 ; i++) {
+      area += ( points[i].getSlope() + points[i+1].getSlope() ) / 2;
+    }
+    
+    areaDerivada = area;
+  }
   
   ////////////////////////////////////////////////////////////////////////////////////////
   // Prepare to Display the values from one Seed
@@ -119,7 +173,7 @@ class Seed {
     int nPoints = value.length;                       // number of value points in cvs file
     GPointsArray points = new GPointsArray(nPoints);  // points of plot
     for (int i = 0; i < nPoints; i++) {
-      points.add(i, value[i], "("+ i +","+ value[i] +") "+layerName);
+      points.add(i, value[i]/*, "("+ i +","+ value[i] +") "+layerName*/);
     }
     plot1.addLayer(layerName, points);     // add points to the layer
     
@@ -216,12 +270,23 @@ class Seed {
   void addSeedToTable( Table tableExport ) {
     if (validSeed == false)  // if the seed is invalid, not add the seed.
       return;
+      
+    calcRMSValue();
+    calcAvgValue();
+    calcAreaDerivada();
+      
     /*  Add row containing the data of this seed  */
     TableRow newRow = tableExport.addRow();
     newRow.setInt("#", item);
     newRow.setInt("timeStamp", timeStamp);
-    for (int i = 0; i<101; i++ ){
-      newRow.setInt( str(i) , value[i]);
+    newRow.setFloat("RMS", rmsValue);
+    newRow.setFloat("Vmedio", avgValue);
+    newRow.setFloat("AreaDerivada", areaDerivada);
+    
+    for (int i = 0; i < interestPointsCount; i++ ){
+      newRow.setInt( "Px"+str(i) , interestPoints[i].getX() );
+      newRow.setInt( "Py"+str(i) , interestPoints[i].getY() );
+      
     }
   }
   

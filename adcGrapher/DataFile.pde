@@ -69,7 +69,7 @@ class DataFile{
       trend.estimate( rawDataVector[i] );
       switch (state) {
         case -1:  //reset
-          minSlope = 256;
+          minSlope = -256;
           auxPoint = null;
           auxMinPoint = null;
           minPointValue = 0xFFFF;
@@ -85,7 +85,7 @@ class DataFile{
               //seedCount++;
               state = 1;
               /*  create a new seed and save the point  */
-              seeds[seedCount] = new Seed( seedCount, i, rawDataVector[i], state);
+              seeds[seedCount] = new Seed( seedCount, i, rawDataVector[i], state, trend.getSlope());
               if (seedCount == 300 ) 
                 print("\nSe alcanzó más de " + seedCount + " semillas.");
               if (seedCount == 1000 ) 
@@ -106,7 +106,7 @@ class DataFile{
         case 1:  //flancoDescendente
           
           /*  Add this point to the seed  */
-          seeds[seedCount].addPoint( i, rawDataVector[i], state );
+          seeds[seedCount].addPoint( i, rawDataVector[i], state, trend.getSlope() );
           
           /*  Guardo el punto mas bajo del pulso  */
            if ( rawDataVector[i] <  minPointValue ) {
@@ -123,7 +123,7 @@ class DataFile{
         break;
         case 2:  //inconsistente
           /* Añado el punto al objeto semilla  */
-          seeds[seedCount].addPoint( i, rawDataVector[i], state );
+          seeds[seedCount].addPoint( i, rawDataVector[i], state, trend.getSlope() );
           
           /*  If i stay a lot in a zero slope, reset  */
           if ( (trend.getSlope() == 0 ) && (trend.getSlopeRate()==0) ) {
@@ -143,11 +143,11 @@ class DataFile{
            }
           
           /*  If i pass to an ascending pulse  */
-          if ( (trend.getSlope() >= slopeTrigger ) && (trend.getSlopeRate()==1) ) {
+          if ( (trend.getSlope() >= slopeTrigger/2 ) && (trend.getSlopeRate()==1) ) {
             seeds[seedCount].addPointOfInterest( auxMinPoint[0], auxMinPoint[1]);  //  Punto correspondiente al minimo del pulso
             
             /* Reseteo los buscadores del punto minimo y el que guarda el punto de interes  */
-              minSlope = 256;
+              minSlope = -256;
               auxPoint = null;
               auxMinPoint = null;
               minPointValue = 0xFFFF;
@@ -162,7 +162,7 @@ class DataFile{
             if (auxPoint != null) seeds[seedCount].addPointOfInterest( auxPoint[0], auxPoint[1]);
             
             /* Reseteo los buscadores del punto minimo y el que guarda el punto de interes  */
-              minSlope = 256;
+              minSlope = -256;
               auxPoint = null;
               auxMinPoint = null;
               minPointValue = 0xFFFF;
@@ -172,7 +172,7 @@ class DataFile{
            }
            
            /*  Guardo auxiliarmente el punto con mas baja slope  */
-           if ( trend.getSlope() < minSlope ) {
+           if ( trend.getSlope() > minSlope ) {
              minSlope = trend.getSlope();
              if ( auxPoint == null) auxPoint = new int[2];
              auxPoint[1] = rawDataVector[i];
@@ -182,7 +182,7 @@ class DataFile{
         break;
         case 3:  //flancoAscendente
           /*  Añado el punto al objeto semilla  */
-          seeds[seedCount].addPoint( i, rawDataVector[i], state );
+          seeds[seedCount].addPoint( i, rawDataVector[i], state, trend.getSlope() );
           
           /*  If i get a stable signal after a upwards flank, it means that the pulse was a seed */
           if ( (trend.getSlope() < slopeTrigger) && (trend.getSlopeRate()==-1) ) {
@@ -269,16 +269,46 @@ class DataFile{
           }
           exportToH();
       break;
-      case 1:  /* Export in .csv format   */
+      case 1:  /* Export in .csv format for seedAnalizer   */
+          exportToSA();
+      break;
+      case 2:  /*  Export statistical data in a .csv format  */
           exportToCSV();
       break;
     }
     
   }
   
-  
-  
   void exportToCSV() {
+    /*  Init new table where to export  */
+    Table tableExport;
+    tableExport = new Table();
+    
+    /*  Add colums  */
+    tableExport.addColumn("#");
+    tableExport.addColumn("timeStamp");
+    tableExport.addColumn("RMS");
+    tableExport.addColumn("Vmedio");
+    tableExport.addColumn("AreaDerivada");
+    for ( int i=0 ; i < 6 ; i++ ){
+      tableExport.addColumn( "Px" + str(i) );
+      tableExport.addColumn( "Py" + str(i) );
+    }
+    
+    /* Add seeds to table  */
+    for ( int i = 0; i < seedCount; i++) {
+      seeds[i].addSeedToTable( tableExport );
+    }
+    
+    /*  Save table  */
+    String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exportedStats.csv";
+    saveTable( tableExport, fileSavedIn );
+    
+    /*  Show success  */
+    javax.swing.JOptionPane.showMessageDialog(null, "File Exported in " + fileSavedIn, "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+  }
+  
+  void exportToSA() {
     /*  Init new table where to export  */
     Table tableExport;
     tableExport = new Table();

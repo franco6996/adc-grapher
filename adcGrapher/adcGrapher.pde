@@ -8,7 +8,7 @@ import java.util.*;
 import java.lang.Math;
 
 // Grafica objects
-GPlot plot1;
+GPlot plot1, plot2;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
@@ -32,7 +32,7 @@ final int plotToY = 680;
 final String swVersion = "1.0";
 boolean debug = true;
 
-public PImage imgConfig, imgDelete, imgExport, imgAdd;
+public PImage imgConfig, imgDelete, imgExport, imgAdd, imgDerivative;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
@@ -61,6 +61,8 @@ void setup() {
   imgExport.filter(GRAY);
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
+  imgDerivative = loadImage("data/derivative.png");
+  imgDerivative.filter(GRAY);
   
   // Check for new Updates
   //checkUpdates();
@@ -77,7 +79,7 @@ void setup() {
   textFont(font);
 }
 
-public int plotMode = 0;
+public int plotMode = 0, drawDerivative = 0;
 void draw() {
   
   background(255);  // clear the previus draw
@@ -92,7 +94,6 @@ void draw() {
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
-      //plot1.drawPoints();
       plot1.getLayer("noPulso").drawPoints();
       plot1.getLayer("pulsoDescendente").drawPoints();
       plot1.getLayer("pulsoAscendente").drawPoints();
@@ -102,9 +103,22 @@ void draw() {
       plot1.drawLabels();
       plot1.endDraw();
       
+      plot2.setXLim( plot1.getXLim() );
+      
+      if ( drawDerivative == 1 ) {
+        plot2.beginDraw();
+        plot2.drawRightAxis();
+        plot2.drawPoints();
+        plot2.drawLines();
+        plot2.drawLabels();
+        plot2.drawGridLines(GPlot.HORIZONTAL);
+        plot2.endDraw();
+      }
+      
       tint(150, 180);
       image(imgDelete, width-10-20 , height-10-16, 24, 24);
       image(imgExport, width-10-20-30 , height-10-16, 24, 24);
+      image(imgDerivative, width-10-20-63 , height-10-16, 26, 24);
     break;
     
     default:  // Default view
@@ -194,6 +208,22 @@ void plot1SetConfig() {
   plot1.activatePanning();
 }
 
+void plot2SetConfig() {
+  // Create the second plot with the same dimensions
+  plot2 = new GPlot(this);
+  plot2.setPos(plot1.getPos());
+  plot2.setMar(plot1.getMar());
+  plot2.setDim(plot1.getDim());
+  plot2.setAxesOffset(4);
+  plot2.setTicksLength(4);
+  
+  plot2.getRightAxis().setAxisLabelText("ADC raw value derivative");
+  
+  // Make the right axis of the second plot visible
+  plot2.getRightAxis().setDrawTickLabels(true);
+  plot1.activatePointLabels();
+}
+
 void loadData(File selection) {
   if (selection == null) {
     javax.swing.JOptionPane.showMessageDialog(null, "No file selected.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
@@ -206,7 +236,10 @@ void loadData(File selection) {
   // Initialize the new file
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath );
   
-  if (dataFileCount == 0 ) plot1SetConfig();
+  if (dataFileCount == 0 ) {
+    plot1SetConfig();
+    plot2SetConfig();
+  }
   
   // Add Layers of the new file selected
   dataFiles[dataFileCount].plotData (plot1);
@@ -232,8 +265,8 @@ void exportFile (int numberExport) {
   if ( dataFileCount == 0 ) return;
   
   /*  Ask what type of file to export  */
-  String[] options = {".h",".csv"};
-  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)\n-SeedAnalizer format (.csv)", "Export File",
+  String[] options = {"1","2","3"};
+  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n1-Vector in a C code format (.h)\n2-SeedAnalizer format (.csv)\n3-Statistical Data (.csv)", "Export File",
   javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
   null, options, options[0]);
   
@@ -268,6 +301,7 @@ void deleteFile () {
  
  dataFiles[0] = null;
  plot1 = null;
+ plot2 = null;
  
  plotMode = 0;
  dataFileCount = 0;
@@ -287,10 +321,15 @@ void mouseClicked() {
       
     if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       exportFile(0);
+      
+    if (mouseX >=  width-10-20-63 && mouseX <=  width-10-20-37 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1) {
+      if (drawDerivative == 1) drawDerivative = 0;
+      else drawDerivative = 1;
+    }
   }
   
   //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-  
+  //image(imgDerivative, width-10-20-63 , height-10-16, 26, 24);
 }
 
 void addFile() {
