@@ -80,10 +80,6 @@ class DataFile{
     
     switch (format) {
       case 0:  /* Export in .h format   */
-          if( rawDataQuantity > 2000 ) {
-            /*  Show wait info  */
-            javax.swing.JOptionPane.showMessageDialog(null, "In a moment your file will be exported", "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-          }
           exportToH();
       break;
       case 1:  /* Export in .csv format   */
@@ -117,7 +113,16 @@ class DataFile{
     
     /*  Add Rows  */
     int count = 0;
-    for (String t : timeStamps) {
+    for (String t : timeStamps) { //<>//
+      // Salteo string vacia
+      if( timeStamps[count].isEmpty() ) {
+        count++;
+        continue;
+      }
+      
+      // Me aseguro de tener puntos suficientes para guardar la semilla
+      if( Integer.valueOf(timeStamps[count]) + 52 > rawDataQuantity )
+        break;
       /*  Add row containing the data arraund each timestamp  */
       TableRow newRow = tableExport.addRow();
       newRow.setInt("#", count);
@@ -149,8 +154,12 @@ class DataFile{
     /*  Start the vector  */
     matrixVector[1] = "uint16_t adcData[NUMBER_OF_POINTS] = { ";
     
+    /* Open a progress bar window  */
+    thread("progressBarWindow");
+    
     for (int i = 0; i < numberOfPointsData; i++) {
       matrixVector[1] += rawDataVector[i] + ", ";
+      progressBarValue = 100*i/numberOfPointsData;  // update the progress
     }
     
     /*  Add the end of the vector  */
@@ -159,6 +168,8 @@ class DataFile{
     /*  Save text file  */
     String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exported.h";
     saveStrings( fileSavedIn, matrixVector );
+    
+    progressBarValue = 100;  // make sure the progress bar is closed
     
     /*  Show success  */
     javax.swing.JOptionPane.showMessageDialog(null, "File Exported in " + fileSavedIn, "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);

@@ -7,6 +7,10 @@ import grafica.*;
 import java.util.*;
 import java.lang.Math;
 
+import java.awt.*;
+import javax.swing.*;
+import java.awt.event.*;
+
 // Grafica objects
 GPlot plot1;
 
@@ -29,7 +33,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.02";
+final String swVersion = "0.03";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd;
@@ -64,7 +68,6 @@ void setup() {
   
   // Check for new Updates
   //checkUpdates();
-  
   
   dataFiles = new DataFile[dataFilesMax];
   dataFileCount = 0;
