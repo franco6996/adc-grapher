@@ -18,6 +18,7 @@ public void progressBarWindow()
     b = new JProgressBar(0, 100);
      
     // set initial value
+    progressBarValue = 0;
     b.setValue(0);
  
     b.setStringPainted(true);
@@ -38,7 +39,7 @@ public void progressBarWindow()
      b.setSize(new Dimension(280,35));
      b.setLocation(20, 5);
      p.setSize( d );
-     
+     delay(50);
    }
    f.dispose();
 }

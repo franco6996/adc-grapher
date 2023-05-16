@@ -7,20 +7,22 @@ import java.net.URISyntaxException;
 
 void checkUpdates() {
   // Open the web file that contains the last SW version released.
-  String[] webFileLines = loadStrings("https://raw.githubusercontent.com/franco6996/seed-analizer/master/version");
+  String[] webFileLines = loadStrings("https://raw.githubusercontent.com/franco6996/adc-grapher/master/version");
   if ( webFileLines == null)
     return;
-    
+  
   String swWebVersion = webFileLines[0];  // put the version into a string
   
   switch ( versionCompare(swVersion, swWebVersion) ) {
     case -1:  // if new version available
-      String[] options = {"Download", "Not now"};
+      String[] options = {"Visit website", "Not now"};
+      println("Found a new version to update!");
       int i = javax.swing.JOptionPane.showOptionDialog(null,"New version available!", "Update Checker",
                 javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
-                null, options, options[1]);
+                null, options, options[0]);
+      // Visit website
       if ( i == 0 ) {
-        String url = "https://github.com/franco6996/seed-analizer/releases";
+        String url = "https://github.com/franco6996/adc-grapher/releases";
         try {
           Desktop.getDesktop().browse( new URI(url) );
         } catch (IOException | URISyntaxException e1) {
@@ -32,7 +34,7 @@ void checkUpdates() {
                             + e1.toString(), "oops",
                     javax.swing.JOptionPane.ERROR_MESSAGE | javax.swing.JOptionPane.OK_OPTION);
         }
-        System.exit(0);
+        //System.exit(0);
       }
       break;
     default:  // if this version is the lastest or newer than web

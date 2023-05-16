@@ -33,7 +33,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.03";
+final String swVersion = "0.04";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd;
@@ -67,7 +67,7 @@ void setup() {
   imgAdd.filter(GRAY);
   
   // Check for new Updates
-  //checkUpdates();
+  thread("checkUpdates");
   
   dataFiles = new DataFile[dataFilesMax];
   dataFileCount = 0;
@@ -78,6 +78,8 @@ void setup() {
   noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
+  
+
 }
 
 public int plotMode = 0;
@@ -99,6 +101,11 @@ void draw() {
       plot1.drawLines();
       plot1.drawLabels();
       plot1.endDraw();
+      
+      /* Name of file*/
+      textAlign(CENTER);
+      fill(80);
+      text("File: " + dataFiles[0].getFileName(), width/2, height-10);
       
       tint(150, 180);
       image(imgDelete, width-10-20 , height-10-16, 24, 24);
@@ -302,7 +309,7 @@ void addFile() {
 
 // Pressing 'n' will bring the window to select a new file to add to the plot
 void keyReleased() {
-  switch (key) { //<>//
+  switch (key) {
     case 'N':
       if (plotMode != 0) return;
       addFile();
@@ -317,7 +324,7 @@ void keyReleased() {
 }
 
 void keyPressed() {
-  switch (key) { //<>//
+  switch (key) {
     case CODED:
       if (plotMode != 1) return;
       float[] yLim = plot1.getYLim();
@@ -347,4 +354,10 @@ public static void main(String[] args) {
     String[] mainSketch = concat(new String[] { adcGrapher.class.getCanonicalName() }, args);
     PApplet.main(mainSketch);
     
+}
+
+/* Automatically called at user exit */
+public void exit() {
+    super.exit();
+    System.exit(0);
 }

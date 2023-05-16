@@ -71,6 +71,14 @@ class DataFile{
   int getFileIndex() {
     return fileIndex;
   }
+
+  int getRawDataQuantity() {
+    return rawDataQuantity;
+  }
+
+  int getRawDataVectorIn(int position) {
+    return rawDataVector[position];
+  }
   
   void setFileIndex( int fi ) {
     fileIndex = fi;
@@ -113,7 +121,7 @@ class DataFile{
     
     /*  Add Rows  */
     int count = 0;
-    for (String t : timeStamps) { //<>//
+    for (String t : timeStamps) {
       // Salteo string vacia
       if( timeStamps[count].isEmpty() ) {
         count++;
@@ -157,23 +165,52 @@ class DataFile{
     /* Open a progress bar window  */
     thread("progressBarWindow");
     
-    for (int i = 0; i < numberOfPointsData; i++) {
-      matrixVector[1] += rawDataVector[i] + ", ";
-      progressBarValue = 100*i/numberOfPointsData;  // update the progress
+    /* Creates the threads to make the conformation of string faster */
+    for (int i = 0; i < numberOfThreadsToUse; i++) {
+      threadsInUse[i] = 0;
     }
+    for (int i = 0; i < numberOfThreadsToUse; i++) {
+      thread("mThreadExport");
+      while (threadsInUse[i] == 0)
+      {
+        delay(10);
+      }
+    }
+    
+    /*  Espero que todos los threads terminen, mientras actualizo la barra de carga */
+    while (progressBarValue < 100)
+    {
+      int auxProgress = 0;
+      for (int i = 0; i < numberOfThreadsToUse; i++) {
+        auxProgress += threadsProgress[i];
+      }
+      progressBarValue = auxProgress / numberOfThreadsToUse;
+      
+      // no hace falta que este procesando esto continuamente
+      try {
+       Thread.sleep(100);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } 
+      
+    }
+
+    /* Concateno las string de los threads */
+    
+    matrixVector[1] += threadString[0] + threadString[1] + threadString[2] + threadString[3] + threadString[4] + threadString[5] + threadString[6] + threadString[7];
     
     /*  Add the end of the vector  */
     matrixVector[1] = matrixVector[1].substring(0,matrixVector[1].length()-2 ) + "};";
     
     /*  Save text file  */
-    String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exported.h";
+    String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exported.h"; //<>//
     saveStrings( fileSavedIn, matrixVector );
     
     progressBarValue = 100;  // make sure the progress bar is closed
     
     /*  Show success  */
     javax.swing.JOptionPane.showMessageDialog(null, "File Exported in " + fileSavedIn, "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-  
+    println("Archivo Exportado");
   }
   
 }
