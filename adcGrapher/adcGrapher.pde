@@ -13,6 +13,9 @@ import java.awt.event.*;
 
 // Grafica objects
 GPlot plot1;
+public int[] plotMarkers = new int[5000];
+public int numberOfPlotMarkers = 0;
+public boolean drawPlotMarkers = true;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
@@ -33,7 +36,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.04";
+final String swVersion = "0.05";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd;
@@ -81,7 +84,7 @@ void setup() {
   
 
 }
-
+int test = 0;
 public int plotMode = 0;
 void draw() {
   
@@ -93,13 +96,21 @@ void draw() {
     case 1:   // Timeline view
       plot1.beginDraw();
       plot1.drawBackground();
-      plot1.drawBox();
+      plot1.drawBox(); //<>//
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
       plot1.drawPoints();
       plot1.drawLines();
       plot1.drawLabels();
+      //Draw Markers
+      if ( drawPlotMarkers == true)
+      {
+        for(int i=0; i< numberOfPlotMarkers; i++)
+        {
+          plot1.drawVerticalLine(plotMarkers[i]*0.1, 150, 2);
+        }
+      }
       plot1.endDraw();
       
       /* Name of file*/

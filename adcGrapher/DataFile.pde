@@ -53,10 +53,32 @@ class DataFile{
     // Add one layer for every seed saved in file
     String layerName = fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
     int nPoints = rawDataQuantity;                       // number of value points in txt file
+    
+    PulseChecker pcheck = new PulseChecker(rawDataVector[10]); // preparo el algoritmo para dibujar la maquina de estado en el plot
+    int current_fsm_status = 0;
+    int last_fsm_status = 0;
+    
     GPointsArray points = new GPointsArray(nPoints);  // points of plot
     for (int i = 0; i < nPoints; i++) {
+      /* Añado el punto a la capa del plot */
       points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +") "+layerName);
+      
+      /* Ejecuto el algoritmo, si cambia de estado agrego un marcador en el grafico */
+      current_fsm_status = pcheck.run( rawDataVector[i] );
+      if( last_fsm_status != current_fsm_status)
+      {
+        last_fsm_status = current_fsm_status;
+        
+        /* Guardo el marcador para dibujarlo mas tarde */
+        plotMarkers[numberOfPlotMarkers] = i;
+        numberOfPlotMarkers++;
+        //plot1.drawVerticalLine( i*0.1, 50, 1); 
+      }
+      
+      
     }
+     //<>//
+    
     plot1.addLayer(layerName, points);     // add points to the layer
     plot1.getLayer(layerName).setFontSize(14);
   }
