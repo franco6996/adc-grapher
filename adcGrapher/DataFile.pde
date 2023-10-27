@@ -54,33 +54,58 @@ class DataFile{
     String layerName = fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
     int nPoints = rawDataQuantity;                       // number of value points in txt file
     
-    PulseChecker pcheck = new PulseChecker(rawDataVector[10]); // preparo el algoritmo para dibujar la maquina de estado en el plot
-    int current_fsm_status = 0;
-    int last_fsm_status = 0;
-    
     GPointsArray points = new GPointsArray(nPoints);  // points of plot
     for (int i = 0; i < nPoints; i++) {
       /* Añado el punto a la capa del plot */
       points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +") "+layerName);
-      
+    } //<>//
+    
+    plot1.addLayer(layerName, points);     // add points to the layer
+    plot1.getLayer(layerName).setFontSize(14);
+  }
+  
+  void getMarkers()
+  {
+    PulseChecker pcheck = new PulseChecker(rawDataVector[10]); // preparo el algoritmo para dibujar la maquina de estado en el plot
+    int current_fsm_status = 0;
+    int last_fsm_status = 0;
+    
+    
       /* Ejecuto el algoritmo, si cambia de estado agrego un marcador en el grafico */
+    numberOfPlotMarkers = 0;
+    for (int i = 0; i < rawDataQuantity; i++) {
       current_fsm_status = pcheck.run( rawDataVector[i] );
       if( last_fsm_status != current_fsm_status)
       {
         last_fsm_status = current_fsm_status;
         
-        /* Guardo el marcador para dibujarlo mas tarde */
+        /* Guardo la posicion del marcador para dibujarlo mas tarde */
         plotMarkers[numberOfPlotMarkers] = i;
+        
+        /* Guardo que texto mostrar junto al marcador*/
+        switch(current_fsm_status)
+        {
+         case 0:
+           plotMarkersText[numberOfPlotMarkers] = "RESET";
+         break;
+         case 1:
+           plotMarkersText[numberOfPlotMarkers] = "NO PULSO";
+         break;
+         case 2:
+           plotMarkersText[numberOfPlotMarkers] = "FLANCO DESCENDENTE";
+         break;
+         case 3:
+           plotMarkersText[numberOfPlotMarkers] = "FLANCO ASCENDENTE";
+         break;
+        }
+        
         numberOfPlotMarkers++;
-        //plot1.drawVerticalLine( i*0.1, 50, 1); 
+        
+        /* Seguridad por si me quedo sin espacio en el vector de marcadores */
+        if( plotMarkersMax == numberOfPlotMarkers)
+          break;
       }
-      
-      
     }
-     //<>//
-    
-    plot1.addLayer(layerName, points);     // add points to the layer
-    plot1.getLayer(layerName).setFontSize(14);
   }
   
   void removeLayers (){

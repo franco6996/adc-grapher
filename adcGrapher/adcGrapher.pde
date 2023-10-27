@@ -13,9 +13,11 @@ import java.awt.event.*;
 
 // Grafica objects
 GPlot plot1;
-public int[] plotMarkers = new int[5000];
+final public int plotMarkersMax = 3000;
+public int[] plotMarkers = new int[plotMarkersMax];
+public String[] plotMarkersText = new String[plotMarkersMax];
 public int numberOfPlotMarkers = 0;
-public boolean drawPlotMarkers = true;
+public boolean drawPlotMarkers = false;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
@@ -100,17 +102,10 @@ void draw() {
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
+      drawMarkers();
       plot1.drawPoints();
       plot1.drawLines();
       plot1.drawLabels();
-      //Draw Markers
-      if ( drawPlotMarkers == true)
-      {
-        for(int i=0; i< numberOfPlotMarkers; i++)
-        {
-          plot1.drawVerticalLine(plotMarkers[i]*0.1, 150, 2);
-        }
-      }
       plot1.endDraw();
       
       /* Name of file*/
@@ -132,6 +127,28 @@ void draw() {
   }
   // Show information text arround the window
   showInfoText();
+}
+
+void drawMarkers()
+{
+  if ( drawPlotMarkers == true)
+  {
+    float yMarkerPos1 =  plot1.getYLim()[0]+0.8*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos2 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    for(int i=0; i< numberOfPlotMarkers; i++)
+    {
+      plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
+      if(plotMarkersText[i] == "RESET")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado 
+      else if(plotMarkersText[i] == "NO PULSO")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
+      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
+      else if(plotMarkersText[i] == "FLANCO DESCENDENTE")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
+    }
+    
+  }
 }
 
 int helpNumber = 0;
@@ -330,6 +347,18 @@ void keyReleased() {
     break;
     case 'E':
       exportFile(0);
+    break;
+    case 'M':
+      if(drawPlotMarkers==false)
+      {
+        dataFiles[0].getMarkers();
+        drawPlotMarkers = true;
+      }
+      else
+      {
+        drawPlotMarkers = false;
+      }
+      
     break;
   }
 }

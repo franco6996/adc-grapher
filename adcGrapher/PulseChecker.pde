@@ -159,4 +159,10 @@ class PulseChecker {
     
   }
   
+  /* Get the costant values of each fsm state */
+  int fsm_reset() { return FSM_RESET;} 
+  int fsm_no_pulse() { return FSM_NO_PULSE;} 
+  int fsm_descending_flank() { return FSM_DESCENDING_FLANK;} 
+  int fsm_ascending_flank() { return FSM_ASCENDING_FLANK;} 
+  
 }
