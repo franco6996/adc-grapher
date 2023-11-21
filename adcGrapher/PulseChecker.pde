@@ -20,7 +20,7 @@ class PulseChecker {
   
   int fsm_state = FSM_RESET;
   
-  final int slope_coeff_trigger = 70;      /**< Coefficient of the signal slope to trigger a change in the pulse received  */
+  int slope_coeff_trigger = 80;      /**< Coefficient of the signal slope to trigger a change in the pulse received  */
   
   final int is_filter_enabled = 1;    /**< Flag to enable or disable the filter of the pulse  */
   final int filter_amplitude_max = 4000;  /**< Max value of ADC counts allowed to a pulse be considered as a seed  */
@@ -28,7 +28,9 @@ class PulseChecker {
   final int filter_width_max = 150;    /**< Max width of the pulse  allowed  to be considered as a seed */
   final int filter_width_min = 7;    /**< Min width of the pulse  allowed  */
 
-  PulseChecker(int initialValue) {
+  PulseChecker(int initialValue, int slope_coeff) {
+    slope_coeff_trigger = slope_coeff;
+    
     last_values = new int[SLOPE_VALUES_TO_ANALYZE];
       /* Init the vector with the set value */
     for (int i = 0; i < SLOPE_VALUES_TO_ANALYZE; i++) {
@@ -126,10 +128,10 @@ class PulseChecker {
           }
           
           /*  Protect for false positives, if a pulse is flat for  40 ticks (4ms) the state machine will be reseted */
-          if( (abs(current_coeff) < 10) )
+          if( (abs(current_coeff) <= 30) )
           {
             false_positive_pulse_detected++;
-            if ( false_positive_pulse_detected == 40 )
+            if ( false_positive_pulse_detected == 30 )
             {
               false_positive_pulse_detected = 0;
               /* Reset the FSM */

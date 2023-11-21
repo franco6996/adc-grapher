@@ -41,7 +41,7 @@ final int plotToY = 680;
 final String swVersion = "0.05";
 boolean debug = true;
 
-public PImage imgConfig, imgDelete, imgExport, imgAdd;
+public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
@@ -70,6 +70,8 @@ void setup() {
   imgExport.filter(GRAY);
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
+  imgM = loadImage("data/m.png");
+  imgM.filter(GRAY);
   
   // Check for new Updates
   thread("checkUpdates");
@@ -98,7 +100,7 @@ void draw() {
     case 1:   // Timeline view
       plot1.beginDraw();
       plot1.drawBackground();
-      plot1.drawBox(); //<>//
+      plot1.drawBox();
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
@@ -113,9 +115,11 @@ void draw() {
       fill(80);
       text("File: " + dataFiles[0].getFileName(), width/2, height-10);
       
+      /* Icons */
       tint(150, 180);
-      image(imgDelete, width-10-20 , height-10-16, 24, 24);
+      image(imgDelete, width-10-20 ,    height-10-16, 24, 24);
       image(imgExport, width-10-20-30 , height-10-16, 24, 24);
+      image(imgM,      width-10-20-60 , height-10-16, 24, 24);
     break;
     
     default:  // Default view
@@ -144,7 +148,7 @@ void drawMarkers()
         plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
       else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
         plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
-      else if(plotMarkersText[i] == "FLANCO DESCENDENTE")
+      else
         plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
     }
     
@@ -319,6 +323,19 @@ void mouseClicked() {
       
     if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       exportFile(0);
+      
+    if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
+    {
+      if(drawPlotMarkers==false)
+      {
+        Boolean rtn_error = dataFiles[0].getMarkers();
+        if( rtn_error == false) drawPlotMarkers = true;
+      }
+      else
+      {
+        drawPlotMarkers = false;
+      }
+    }
   }
   
   //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
@@ -351,8 +368,8 @@ void keyReleased() {
     case 'M':
       if(drawPlotMarkers==false)
       {
-        dataFiles[0].getMarkers();
-        drawPlotMarkers = true;
+        Boolean rtn_error = dataFiles[0].getMarkers();
+        if( rtn_error == false) drawPlotMarkers = true;
       }
       else
       {

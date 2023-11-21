@@ -64,9 +64,31 @@ class DataFile{
     plot1.getLayer(layerName).setFontSize(14);
   }
   
-  void getMarkers()
+  Boolean getMarkers()
   {
-    PulseChecker pcheck = new PulseChecker(rawDataVector[10]); // preparo el algoritmo para dibujar la maquina de estado en el plot
+    Boolean fail = false;
+    int coeff = 70;
+    try
+    {
+      String coeff_s = javax.swing.JOptionPane.showInputDialog(null,"Set Slope Trigger Coeff (40-150)", 70);
+    
+      if(coeff_s.isBlank() || coeff_s.isEmpty() ) throw new Exception();
+    
+      coeff = int(coeff_s);
+    
+      if(coeff <= 0) throw new Exception();
+    }
+    catch (Exception e)
+    {
+      javax.swing.JOptionPane.showMessageDialog(
+                    null,"Error de entrada.", "oops!",
+                    javax.swing.JOptionPane.ERROR_MESSAGE | javax.swing.JOptionPane.OK_OPTION);
+      fail = true;
+    }
+    
+    if(fail) return fail;
+    
+    PulseChecker pcheck = new PulseChecker(rawDataVector[10],coeff); // preparo el algoritmo para dibujar la maquina de estado en el plot
     int current_fsm_status = 0;
     int last_fsm_status = 0;
     
@@ -106,6 +128,8 @@ class DataFile{
           break;
       }
     }
+    
+    return fail;
   }
   
   void removeLayers (){
