@@ -7,8 +7,17 @@ import grafica.*;
 import java.util.*;
 import java.lang.Math;
 
+import java.awt.*;
+import javax.swing.*;
+import java.awt.event.*;
+
 // Grafica objects
-GPlot plot1, plot2;
+GPlot plot1;
+final public int plotMarkersMax = 3000;
+public int[] plotMarkers = new int[plotMarkersMax];
+public String[] plotMarkersText = new String[plotMarkersMax];
+public int numberOfPlotMarkers = 0;
+public boolean drawPlotMarkers = false;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
@@ -29,10 +38,10 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "1.0";
+final String swVersion = "0.05";
 boolean debug = true;
 
-public PImage imgConfig, imgDelete, imgExport, imgAdd, imgDerivative;
+public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
@@ -61,12 +70,11 @@ void setup() {
   imgExport.filter(GRAY);
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
-  imgDerivative = loadImage("data/derivative.png");
-  imgDerivative.filter(GRAY);
+  imgM = loadImage("data/m.png");
+  imgM.filter(GRAY);
   
   // Check for new Updates
-  //checkUpdates();
-  
+  thread("checkUpdates");
   
   dataFiles = new DataFile[dataFilesMax];
   dataFileCount = 0;
@@ -77,9 +85,11 @@ void setup() {
   noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
-}
+  
 
-public int plotMode = 0, drawDerivative = 0;
+}
+int test = 0;
+public int plotMode = 0;
 void draw() {
   
   background(255);  // clear the previus draw
@@ -94,31 +104,22 @@ void draw() {
       plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
-      plot1.getLayer("noPulso").drawPoints();
-      plot1.getLayer("pulsoDescendente").drawPoints();
-      plot1.getLayer("pulsoAscendente").drawPoints();
-      plot1.getLayer("pulsoInconsistente").drawPoints();
-      plot1.getLayer("interest").drawPoints();
-      plot1.getLayer("fondo").drawLines();
+      drawMarkers();
+      plot1.drawPoints();
+      plot1.drawLines();
       plot1.drawLabels();
       plot1.endDraw();
       
-      plot2.setXLim( plot1.getXLim() );
+      /* Name of file*/
+      textAlign(CENTER);
+      fill(80);
+      text("File: " + dataFiles[0].getFileName(), width/2, height-10);
       
-      if ( drawDerivative == 1 ) {
-        plot2.beginDraw();
-        plot2.drawRightAxis();
-        plot2.drawPoints();
-        plot2.drawLines();
-        plot2.drawLabels();
-        plot2.drawGridLines(GPlot.HORIZONTAL);
-        plot2.endDraw();
-      }
-      
+      /* Icons */
       tint(150, 180);
-      image(imgDelete, width-10-20 , height-10-16, 24, 24);
+      image(imgDelete, width-10-20 ,    height-10-16, 24, 24);
       image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-      image(imgDerivative, width-10-20-63 , height-10-16, 26, 24);
+      image(imgM,      width-10-20-60 , height-10-16, 24, 24);
     break;
     
     default:  // Default view
@@ -130,6 +131,28 @@ void draw() {
   }
   // Show information text arround the window
   showInfoText();
+}
+
+void drawMarkers()
+{
+  if ( drawPlotMarkers == true)
+  {
+    float yMarkerPos1 =  plot1.getYLim()[0]+0.8*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos2 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    for(int i=0; i< numberOfPlotMarkers; i++)
+    {
+      plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
+      if(plotMarkersText[i] == "RESET")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado 
+      else if(plotMarkersText[i] == "NO PULSO")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
+      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
+      else
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
+    }
+    
+  }
 }
 
 int helpNumber = 0;
@@ -208,22 +231,6 @@ void plot1SetConfig() {
   plot1.activatePanning();
 }
 
-void plot2SetConfig() {
-  // Create the second plot with the same dimensions
-  plot2 = new GPlot(this);
-  plot2.setPos(plot1.getPos());
-  plot2.setMar(plot1.getMar());
-  plot2.setDim(plot1.getDim());
-  plot2.setAxesOffset(4);
-  plot2.setTicksLength(4);
-  
-  plot2.getRightAxis().setAxisLabelText("ADC raw value derivative");
-  
-  // Make the right axis of the second plot visible
-  plot2.getRightAxis().setDrawTickLabels(true);
-  plot1.activatePointLabels();
-}
-
 void loadData(File selection) {
   if (selection == null) {
     javax.swing.JOptionPane.showMessageDialog(null, "No file selected.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
@@ -236,18 +243,14 @@ void loadData(File selection) {
   // Initialize the new file
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath );
   
-  if (dataFileCount == 0 ) {
-    plot1SetConfig();
-    plot2SetConfig();
-  }
+  if (dataFileCount == 0 ) plot1SetConfig();
   
   // Add Layers of the new file selected
-  dataFiles[dataFileCount].plotData (plot1);
-  dataFiles[dataFileCount].analyzeAndPlot();
+  dataFiles[dataFileCount].plotData( plot1 );
   
   // Set the plot title
-  plot1.setTitleText( dataPointCounter + " Data Points - "+ dataFiles[0].getSeedCount() + " semillas detectadas");
-  plot1.setXLim(0, dataFiles[0].getRawDataQuantity()*0.1 );
+  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
+  
   // Prepare for the next file
   dataFileCount++;
   
@@ -265,8 +268,8 @@ void exportFile (int numberExport) {
   if ( dataFileCount == 0 ) return;
   
   /*  Ask what type of file to export  */
-  String[] options = {"1","2","3"};
-  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n1-Vector in a C code format (.h)\n2-SeedAnalizer format (.csv)\n3-Statistical Data (.csv)", "Export File",
+  String[] options = {".h",".csv"};
+  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)\n-SeedAnalizer format (.csv)", "Export File",
   javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
   null, options, options[0]);
   
@@ -301,7 +304,6 @@ void deleteFile () {
  
  dataFiles[0] = null;
  plot1 = null;
- plot2 = null;
  
  plotMode = 0;
  dataFileCount = 0;
@@ -322,14 +324,22 @@ void mouseClicked() {
     if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       exportFile(0);
       
-    if (mouseX >=  width-10-20-63 && mouseX <=  width-10-20-37 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1) {
-      if (drawDerivative == 1) drawDerivative = 0;
-      else drawDerivative = 1;
+    if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
+    {
+      if(drawPlotMarkers==false)
+      {
+        Boolean rtn_error = dataFiles[0].getMarkers();
+        if( rtn_error == false) drawPlotMarkers = true;
+      }
+      else
+      {
+        drawPlotMarkers = false;
+      }
     }
   }
   
   //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-  //image(imgDerivative, width-10-20-63 , height-10-16, 26, 24);
+  
 }
 
 void addFile() {
@@ -354,6 +364,18 @@ void keyReleased() {
     break;
     case 'E':
       exportFile(0);
+    break;
+    case 'M':
+      if(drawPlotMarkers==false)
+      {
+        Boolean rtn_error = dataFiles[0].getMarkers();
+        if( rtn_error == false) drawPlotMarkers = true;
+      }
+      else
+      {
+        drawPlotMarkers = false;
+      }
+      
     break;
   }
 }
@@ -389,4 +411,10 @@ public static void main(String[] args) {
     String[] mainSketch = concat(new String[] { adcGrapher.class.getCanonicalName() }, args);
     PApplet.main(mainSketch);
     
+}
+
+/* Automatically called at user exit */
+public void exit() {
+    super.exit();
+    System.exit(0);
 }
