@@ -13,7 +13,7 @@ import java.awt.event.*;
 
 // Grafica objects
 GPlot plot1;
-final public int plotMarkersMax = 3000;
+final public int plotMarkersMax = 30000;
 public int[] plotMarkers = new int[plotMarkersMax];
 public String[] plotMarkersText = new String[plotMarkersMax];
 public int numberOfPlotMarkers = 0;
@@ -38,18 +38,19 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.05";
+final String swVersion = "0.06";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
+  
   //smooth(4);
 }
 
 void setup() {
-  
+  surface.setResizable(false);
   frameRate(30);
   background(255);
   randomSeed(99);
@@ -82,7 +83,7 @@ void setup() {
   plotMode = 0;
   
   
-  noLoop();
+  //noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
   
@@ -137,19 +138,21 @@ void drawMarkers()
 {
   if ( drawPlotMarkers == true)
   {
-    float yMarkerPos1 =  plot1.getYLim()[0]+0.8*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos2 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos1 =  plot1.getYLim()[0]+0.7*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos2 =  plot1.getYLim()[0]+0.85*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos3 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos4 =  plot1.getYLim()[0]+1.15*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
     for(int i=0; i< numberOfPlotMarkers; i++)
     {
       plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
       if(plotMarkersText[i] == "RESET")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado 
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado 
       else if(plotMarkersText[i] == "NO PULSO")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
-      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
-      else
         plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
+      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos3, LEFT, CENTER); // le pongo el texto almacenado
+      else
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos4, LEFT, CENTER); // le pongo el texto almacenado
     }
     
   }
@@ -221,9 +224,10 @@ void plot1SetConfig() {
   
   plot1.getYAxis().setLim(new float[] { 0, 4100});
   plot1.getYAxis().setNTicks( 10);
-  plot1.getXAxis().setLim(new float[] { 0, 10});
-  plot1.setFixedXLim(true);
+  
   plot1.getXAxis().setNTicks( 10);
+  plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
+  plot1.setFixedXLim(true);
   
   // Set plot1 configs
   plot1.activatePointLabels();
@@ -337,8 +341,6 @@ void mouseClicked() {
       }
     }
   }
-  
-  //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
   
 }
 
