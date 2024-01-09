@@ -168,7 +168,7 @@ void showInfoText() {
       if ( helpNumber > 0 )  helpNumber = 0;
     }
     if ( plotMode == 1) {
-      if ( helpNumber > 1 )  helpNumber = 0;
+      if ( helpNumber > 3 )  helpNumber = 0;
     }
     time = millis();
   }
@@ -188,6 +188,12 @@ void showInfoText() {
       break;
       case 1:
         text("Press 'E' to export the file", 10, height-10);
+      break;
+      case 2:
+        text("Press 'M' to show markers of the pulses", 10, height-10);
+      break;
+      case 3:
+        text("Press the Arrow Keys to expand or contract the graph", 10, height-10);
       break;
     }
   }
@@ -385,8 +391,9 @@ void keyReleased() {
 void keyPressed() {
   switch (key) {
     case CODED:
-      if (plotMode != 1) return;
+      if (plotMode != 1) return;  // si no tengo grafico activo salgo
       float[] yLim = plot1.getYLim();
+      float[] xLim = plot1.getXLim();
       switch (keyCode) {
         case UP:
           if ( yLim[0] < 100 ) yLim[0]=50;
@@ -399,6 +406,23 @@ void keyPressed() {
             yLim[1] += 50;
           }
           plot1.setYLim ( yLim[0]+50 , yLim[1]-50);
+        break;
+        case LEFT:  // contraigo el grafico
+          if ( xLim[0] < 100 ) xLim[0]=50;
+          plot1.setXLim ( xLim[0]-50 , xLim[1]+50);
+        break;
+        case RIGHT:  // expando
+          if ( xLim[1] - xLim[0] < 50 ) {
+            break;
+          }
+          
+          if ( xLim[1] - xLim[0] < 1000 ) {
+            plot1.setXLim ( xLim[0]+15 , xLim[1]-15);
+          }
+          else
+          {
+            plot1.setXLim ( xLim[0]+50 , xLim[1]-50);
+          }
         break;
       }
     break;

@@ -24,22 +24,36 @@ class DataFile{
     
     // Data file validation
     
-    // At this point i supouse that the file loaded is valir and not corrupt
-    
     // Determine the number of int16 data point is contained by the rawData string
     rawDataQuantity = floor( rawData[0].length() / 4 );
-    dataPointCounter = rawDataQuantity;
     rawDataVector = new int[rawDataQuantity];
+    Boolean invertHex = false;  // invierte la transformación de string hexa a entero.
+    
+    // Transformo un solo numero para confirmar inversion segun bits ADC
+    String h0= rawData[0].substring(0,2);
+    String h1= rawData[0].substring(2,4);
+    if(unhex( h1 + h0 ) > 4096) invertHex = true;
     
     /*  Extract the data vector  */
     for (int i = 0; i < rawDataQuantity; i++) {
       int relativePos = i * 4;  // by 4 becouse the ADC are 16bit values ( ej. 0x5522 = 4 characters of the string rawData)
       String s0= rawData[0].substring(relativePos,relativePos+2);
       String s1= rawData[0].substring(relativePos+2,relativePos+4);
-      int value = unhex( s1 + s0 );
+      
+      int value;
+      
+      if( invertHex == true )  // si el valor es más grande que el ADC, tengo que invertir h1, h0
+      {
+        value = unhex( s0 + s1 );
+      }
+      else
+      {
+        value = unhex( s1 + s0 );
+      } //<>//
       
       rawDataVector[i] = value;
     }
+    
     
   }
   
