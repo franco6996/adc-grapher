@@ -106,8 +106,26 @@ void draw() {
       plot1.drawXAxis();
       plot1.drawTitle();
       drawMarkers();
-      plot1.drawPoints();
-      plot1.drawLines();
+      
+      /* Segun zoom aplicado dibujo capa de baja calidad */
+      float[] xLim = plot1.getXLim();
+      String layerToDraw;
+      if(xLim[1] - xLim[0] < 3000)        
+      {
+        layerToDraw = "main"; 
+      }
+      else if (xLim[1] - xLim[0] < 13000)
+      {
+        layerToDraw = "lowQualy";
+      }
+      else
+      {
+        layerToDraw = "superLowQualy";
+      }
+      
+      
+      plot1.getLayer(layerToDraw).drawPoints();  
+      plot1.getLayer(layerToDraw).drawLines();
       plot1.drawLabels();
       plot1.endDraw();
       
@@ -130,6 +148,7 @@ void draw() {
       imageMode(CORNER);
     break;
   }
+  
   // Show information text arround the window
   showInfoText();
 }

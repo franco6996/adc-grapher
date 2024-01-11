@@ -65,17 +65,43 @@ class DataFile{
   
   void plotData ( GPlot plot) {
     // Add one layer for every seed saved in file
-    String layerName = fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
+    String layerName = "main";//fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
+    String lq_layerName = "lowQualy";// + layerName;
+    String slq_layerName = "superLowQualy";
     int nPoints = rawDataQuantity;                       // number of value points in txt file
+    int slq_scale = 64;
+    int lq_scale = 4;
     
     GPointsArray points = new GPointsArray(nPoints);  // points of plot
+    GPointsArray lowQualyPoints = new GPointsArray(nPoints/lq_scale);  // points for low qualy layer
+    GPointsArray superLowQualyPoints = new GPointsArray(nPoints/slq_scale);  // points for super low qualy layer
+    
     for (int i = 0; i < nPoints; i++) {
       /* Añado el punto a la capa del plot */
-      points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +") "+layerName);
+      points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +")");
+      
+      if( i % lq_scale == 0 )  //every lq_scale points save one for the low qualy layer
+      {
+        lowQualyPoints.add(i*0.1, rawDataVector[i]);
+      }
+      if( i % slq_scale == 0 )  //every slq_scale points save one for the super low qualy layer
+      {
+        superLowQualyPoints.add(i*0.1, rawDataVector[i]);
+      }
     } //<>//
     
-    plot1.addLayer(layerName, points);     // add points to the layer
+    // Main Layer
+    plot1.addLayer(layerName, points);     // add points to the main layer
     plot1.getLayer(layerName).setFontSize(14);
+    // Low Qualy Layer
+    plot1.addLayer(lq_layerName, lowQualyPoints);
+    plot1.getLayer(lq_layerName).setFontSize(14);
+    plot1.getLayer(lq_layerName).setPointSize(5);
+    
+    // Super Low Qualy Layer
+    plot1.addLayer(slq_layerName, superLowQualyPoints);
+    plot1.getLayer(slq_layerName).setFontSize(14);
+    plot1.getLayer(slq_layerName).setPointSize(4);
   }
   
   Boolean getMarkers()
