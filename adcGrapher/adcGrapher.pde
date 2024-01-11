@@ -13,7 +13,7 @@ import java.awt.event.*;
 
 // Grafica objects
 GPlot plot1;
-final public int plotMarkersMax = 3000;
+final public int plotMarkersMax = 30000;
 public int[] plotMarkers = new int[plotMarkersMax];
 public String[] plotMarkersText = new String[plotMarkersMax];
 public int numberOfPlotMarkers = 0;
@@ -23,7 +23,6 @@ public boolean drawPlotMarkers = false;
 DataFile[] dataFiles;
 final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the same time
 public int dataFileCount;  // Counts the files alredy loaded
-public int dataPointCounter = 0;
 public boolean firstTimeStarted = true;
 
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
@@ -38,18 +37,19 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.05";
+final String swVersion = "0.06";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
+  
   //smooth(4);
 }
 
 void setup() {
-  
+  surface.setResizable(false);
   frameRate(30);
   background(255);
   randomSeed(99);
@@ -82,7 +82,7 @@ void setup() {
   plotMode = 0;
   
   
-  noLoop();
+  //noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
   
@@ -105,8 +105,26 @@ void draw() {
       plot1.drawXAxis();
       plot1.drawTitle();
       drawMarkers();
-      plot1.drawPoints();
-      plot1.drawLines();
+      
+      /* Segun zoom aplicado dibujo capa de baja calidad */
+      float[] xLim = plot1.getXLim();
+      String layerToDraw;
+      if(xLim[1] - xLim[0] < 3000)        
+      {
+        layerToDraw = "main"; 
+      }
+      else if (xLim[1] - xLim[0] < 13000)
+      {
+        layerToDraw = "lowQualy";
+      }
+      else
+      {
+        layerToDraw = "superLowQualy";
+      }
+      
+      
+      plot1.getLayer(layerToDraw).drawPoints();  
+      plot1.getLayer(layerToDraw).drawLines();
       plot1.drawLabels();
       plot1.endDraw();
       
@@ -127,8 +145,13 @@ void draw() {
       imageMode(CENTER);
       image(imgAdd, width/2, height/2, 128, 128);
       imageMode(CORNER);
+      textAlign(CENTER);
+      textSize(14);
+      text("Load a '.txt' file that contains 16bits hexadecimal values", width/2, (height/2)+130);
+      text("with no comma or separation", width/2, (height/2)+148);
     break;
   }
+  
   // Show information text arround the window
   showInfoText();
 }
@@ -137,19 +160,21 @@ void drawMarkers()
 {
   if ( drawPlotMarkers == true)
   {
-    float yMarkerPos1 =  plot1.getYLim()[0]+0.8*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos2 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos1 =  plot1.getYLim()[0]+0.7*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos2 =  plot1.getYLim()[0]+0.85*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos3 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
+    float yMarkerPos4 =  plot1.getYLim()[0]+1.15*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
     for(int i=0; i< numberOfPlotMarkers; i++)
     {
       plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
       if(plotMarkersText[i] == "RESET")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado 
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado 
       else if(plotMarkersText[i] == "NO PULSO")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
-      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado
-      else
         plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
+      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos3, LEFT, CENTER); // le pongo el texto almacenado
+      else
+        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos4, LEFT, CENTER); // le pongo el texto almacenado
     }
     
   }
@@ -165,7 +190,7 @@ void showInfoText() {
       if ( helpNumber > 0 )  helpNumber = 0;
     }
     if ( plotMode == 1) {
-      if ( helpNumber > 1 )  helpNumber = 0;
+      if ( helpNumber > 3 )  helpNumber = 0;
     }
     time = millis();
   }
@@ -185,6 +210,12 @@ void showInfoText() {
       break;
       case 1:
         text("Press 'E' to export the file", 10, height-10);
+      break;
+      case 2:
+        text("Press 'M' to show markers of the pulses", 10, height-10);
+      break;
+      case 3:
+        text("Press the Arrow Keys to expand or contract the graph", 10, height-10);
       break;
     }
   }
@@ -215,15 +246,16 @@ void plot1SetConfig() {
   plot1.setDim( plotToX*2-plotFromX+120, plotToY-plotFromY);
   
   // Set the plot title and the axis labels
-  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
+  plot1.setTitleText("Timeline Representation of " + nfc(dataFiles[0].getRawDataQuantity()) + " Data Points");
   plot1.getXAxis().setAxisLabelText("Time [ms]");
   plot1.getYAxis().setAxisLabelText("ADC raw value");
   
   plot1.getYAxis().setLim(new float[] { 0, 4100});
   plot1.getYAxis().setNTicks( 10);
-  plot1.getXAxis().setLim(new float[] { 0, 10});
-  plot1.setFixedXLim(true);
+  
   plot1.getXAxis().setNTicks( 10);
+  plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
+  plot1.setFixedXLim(true);
   
   // Set plot1 configs
   plot1.activatePointLabels();
@@ -247,9 +279,6 @@ void loadData(File selection) {
   
   // Add Layers of the new file selected
   dataFiles[dataFileCount].plotData( plot1 );
-  
-  // Set the plot title
-  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
   
   // Prepare for the next file
   dataFileCount++;
@@ -338,8 +367,6 @@ void mouseClicked() {
     }
   }
   
-  //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-  
 }
 
 void addFile() {
@@ -383,8 +410,9 @@ void keyReleased() {
 void keyPressed() {
   switch (key) {
     case CODED:
-      if (plotMode != 1) return;
+      if (plotMode != 1) return;  // si no tengo grafico activo salgo
       float[] yLim = plot1.getYLim();
+      float[] xLim = plot1.getXLim();
       switch (keyCode) {
         case UP:
           if ( yLim[0] < 100 ) yLim[0]=50;
@@ -397,6 +425,23 @@ void keyPressed() {
             yLim[1] += 50;
           }
           plot1.setYLim ( yLim[0]+50 , yLim[1]-50);
+        break;
+        case LEFT:  // contraigo el grafico
+          if ( xLim[0] < 100 ) xLim[0]=50;
+          plot1.setXLim ( xLim[0]-50 , xLim[1]+50);
+        break;
+        case RIGHT:  // expando
+          if ( xLim[1] - xLim[0] < 50 ) {
+            break;
+          }
+          
+          if ( xLim[1] - xLim[0] < 1000 ) {
+            plot1.setXLim ( xLim[0]+15 , xLim[1]-15);
+          }
+          else
+          {
+            plot1.setXLim ( xLim[0]+50 , xLim[1]-50);
+          }
         break;
       }
     break;

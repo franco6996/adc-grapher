@@ -24,22 +24,36 @@ class DataFile{
     
     // Data file validation
     
-    // At this point i supouse that the file loaded is valir and not corrupt
-    
     // Determine the number of int16 data point is contained by the rawData string
     rawDataQuantity = floor( rawData[0].length() / 4 );
-    dataPointCounter = rawDataQuantity;
     rawDataVector = new int[rawDataQuantity];
+    Boolean invertHex = false;  // invierte la transformación de string hexa a entero.
+    
+    // Transformo un solo numero para confirmar inversion segun bits ADC
+    String h0= rawData[0].substring(0,2);
+    String h1= rawData[0].substring(2,4);
+    if(unhex( h1 + h0 ) > 4096) invertHex = true;
     
     /*  Extract the data vector  */
     for (int i = 0; i < rawDataQuantity; i++) {
       int relativePos = i * 4;  // by 4 becouse the ADC are 16bit values ( ej. 0x5522 = 4 characters of the string rawData)
       String s0= rawData[0].substring(relativePos,relativePos+2);
       String s1= rawData[0].substring(relativePos+2,relativePos+4);
-      int value = unhex( s1 + s0 );
+      
+      int value;
+      
+      if( invertHex == true )  // si el valor es más grande que el ADC, tengo que invertir h1, h0
+      {
+        value = unhex( s0 + s1 );
+      }
+      else
+      {
+        value = unhex( s1 + s0 );
+      } //<>//
       
       rawDataVector[i] = value;
     }
+    
     
   }
   
@@ -51,17 +65,43 @@ class DataFile{
   
   void plotData ( GPlot plot) {
     // Add one layer for every seed saved in file
-    String layerName = fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
+    String layerName = "main";//fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
+    String lq_layerName = "lowQualy";// + layerName;
+    String slq_layerName = "superLowQualy";
     int nPoints = rawDataQuantity;                       // number of value points in txt file
+    int slq_scale = 64;
+    int lq_scale = 4;
     
     GPointsArray points = new GPointsArray(nPoints);  // points of plot
+    GPointsArray lowQualyPoints = new GPointsArray(nPoints/lq_scale);  // points for low qualy layer
+    GPointsArray superLowQualyPoints = new GPointsArray(nPoints/slq_scale);  // points for super low qualy layer
+    
     for (int i = 0; i < nPoints; i++) {
       /* Añado el punto a la capa del plot */
-      points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +") "+layerName);
+      points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +")");
+      
+      if( i % lq_scale == 0 )  //every lq_scale points save one for the low qualy layer
+      {
+        lowQualyPoints.add(i*0.1, rawDataVector[i]);
+      }
+      if( i % slq_scale == 0 )  //every slq_scale points save one for the super low qualy layer
+      {
+        superLowQualyPoints.add(i*0.1, rawDataVector[i]);
+      }
     } //<>//
     
-    plot1.addLayer(layerName, points);     // add points to the layer
+    // Main Layer
+    plot1.addLayer(layerName, points);     // add points to the main layer
     plot1.getLayer(layerName).setFontSize(14);
+    // Low Qualy Layer
+    plot1.addLayer(lq_layerName, lowQualyPoints);
+    plot1.getLayer(lq_layerName).setFontSize(14);
+    plot1.getLayer(lq_layerName).setPointSize(5);
+    
+    // Super Low Qualy Layer
+    plot1.addLayer(slq_layerName, superLowQualyPoints);
+    plot1.getLayer(slq_layerName).setFontSize(14);
+    plot1.getLayer(slq_layerName).setPointSize(4);
   }
   
   Boolean getMarkers()

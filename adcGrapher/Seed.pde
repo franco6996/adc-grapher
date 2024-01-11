@@ -108,11 +108,6 @@ class Seed {
     plot_.getLayer("pulsoDescendente").addPoints(p1);
     plot_.getLayer("pulsoInconsistente").addPoints(p2);
     plot_.getLayer("pulsoAscendente").addPoints(p3);
-    
-    plot2.addLayer( str(item) , pd);
-    plot2.getLayer(str(item)).setFontSize(14);
-    plot2.getLayer(str(item)).setLineColor( color(255,0,200,80) );
-    plot2.getLayer(str(item)).setPointColor( color(255,0,200,80) );
   }
   
   void plotInterestPoints (GPlot plot_){
