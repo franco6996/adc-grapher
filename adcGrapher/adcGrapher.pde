@@ -23,7 +23,6 @@ public boolean drawPlotMarkers = false;
 DataFile[] dataFiles;
 final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the same time
 public int dataFileCount;  // Counts the files alredy loaded
-public int dataPointCounter = 0;
 public boolean firstTimeStarted = true;
 
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
@@ -146,6 +145,10 @@ void draw() {
       imageMode(CENTER);
       image(imgAdd, width/2, height/2, 128, 128);
       imageMode(CORNER);
+      textAlign(CENTER);
+      textSize(14);
+      text("Load a '.txt' file that contains 16bits hexadecimal values", width/2, (height/2)+130);
+      text("with no comma or separation", width/2, (height/2)+148);
     break;
   }
   
@@ -243,7 +246,7 @@ void plot1SetConfig() {
   plot1.setDim( plotToX*2-plotFromX+120, plotToY-plotFromY);
   
   // Set the plot title and the axis labels
-  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
+  plot1.setTitleText("Timeline Representation of " + nfc(dataFiles[0].getRawDataQuantity()) + " Data Points");
   plot1.getXAxis().setAxisLabelText("Time [ms]");
   plot1.getYAxis().setAxisLabelText("ADC raw value");
   
@@ -276,9 +279,6 @@ void loadData(File selection) {
   
   // Add Layers of the new file selected
   dataFiles[dataFileCount].plotData( plot1 );
-  
-  // Set the plot title
-  plot1.setTitleText("Timeline Representation of " + dataPointCounter + " Data Points");
   
   // Prepare for the next file
   dataFileCount++;
