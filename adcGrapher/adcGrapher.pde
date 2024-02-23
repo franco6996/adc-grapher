@@ -37,7 +37,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.06";
+final String swVersion = "0.07";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
