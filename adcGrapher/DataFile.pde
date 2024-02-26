@@ -7,14 +7,17 @@ class DataFile{
   int rawDataQuantity;
   String fileNamePath , fileName;
   int fileIndex; // indicate the order in wich the file was added
+  
+  SignalDescriptor signalsInFile; // Quantity and order of the signals contained in the file
 
   
   // For data validation
   String[] column_titles;
   
   // Initialize the file
-  DataFile (String file, String filePath) {
+  DataFile (String file, String filePath, SignalDescriptor _signalsInFile) {
     fileIndex = dataFileCount;
+    signalsInFile = _signalsInFile;
     // Get the name of the selected file
     fileNamePath = filePath;
     fileName = file;

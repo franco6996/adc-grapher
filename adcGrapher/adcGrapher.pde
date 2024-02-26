@@ -272,8 +272,12 @@ void loadData(File selection) {
   String fileName = selection.getName(), fileNamePath = selection.getAbsolutePath();
   loadingText();
   
+  SignalDescriptor signalsInFile = new SignalDescriptor(2);
+  signalsInFile.setSignal(0,"analog",2);
+  signalsInFile.setSignal(1,"digital",1);
+  
   // Initialize the new file
-  dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath );
+  dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
   
   if (dataFileCount == 0 ) plot1SetConfig();
   
