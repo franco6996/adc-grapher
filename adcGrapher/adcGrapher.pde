@@ -25,6 +25,12 @@ final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the sa
 public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
+/* Signals in*/
+public final int maxNumberOfAnalogSignals = 3;
+public final int maxNumberOfDigitalSignals = 5;
+public AnalogSignal[] analogSignals = new AnalogSignal[maxNumberOfAnalogSignals];
+public DigitalSignal[] digitalSignals = new DigitalSignal[maxNumberOfDigitalSignals];
+
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
 int[] predefinedColorR = {  255,   0,   0, 255,   0, 255,};
 int[] predefinedColorG = {    0, 200,   0, 210, 255,   0,};

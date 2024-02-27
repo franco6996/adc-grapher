@@ -3,6 +3,7 @@ class DataFile{
   Seed[] seeds;
   
   String[] rawData;
+  byte[] rawDataBytes;
   int[] rawDataVector;
   int rawDataQuantity;
   String fileNamePath , fileName;
@@ -21,6 +22,32 @@ class DataFile{
     // Get the name of the selected file
     fileNamePath = filePath;
     fileName = file;
+    
+    /* Process the .bin file that contains raw data in bytes */
+    rawDataBytes = loadBytes(fileNamePath);
+    
+    /* Vector de diferentes señales en archivo */
+    int[][] signals = new int[signalsInFile.getSignalQuantity()][rawDataBytes.length/signalsInFile.getSignalsSize()];  // lugar donde guardo las señales ya convertidas, en el orden del signalDescriptor
+    
+    /* Recorro el vector de datos leidos del archivo, en saltos de bytes segun la cantidad de señales */
+    int _index = 0;
+    for(int _pos = 0; _pos < rawDataBytes.length; _pos += signalsInFile.getSignalsSize()) {
+      
+      int _byteProcessed = 0;
+      /* Procesamiento para cada señale en el tramo */
+      for(int _signal = 0; _signal < signalsInFile.getSignalQuantity(); _signal ++) {
+      
+        /* Procesamiento para el tamaño en cada señal */
+        for( int b = 0; b < signalsInFile.getSignalSize(_signal); b++) {
+          /* Guardo valor correspondiente a X _signal en la posicion correspondiente */
+          signals[_signal][_index] = (signals[_signal][_index] << 8) | rawDataBytes[_pos + _byteProcessed]; //<>//
+          _byteProcessed++;
+        }
+      }
+      _index++;
+    }
+    
+    /* En este punto ya tengo todas las señales cargadas en 'signals[][]' */
     
     // Load .txt file
     rawData = loadStrings(fileNamePath);

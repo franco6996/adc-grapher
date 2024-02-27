@@ -2,11 +2,6 @@ class SignalDescriptor{
   int[][] signalDescriptorVector;    /* [0]Signal Tipe: Analog = 0, Digital = 1 -  [1]Signal Bytes  */
   final int signalType = 0, signalSize = 1;
   int numberOfSignals;
-  /*
-  final int maxNumberOfAnalogSignals = 3;
-  final int maxNumberOfDigitalSignals = 5;
-  AnalogSignal[] analogSignals;
-  DigitalSignal[] digitalSignals;*/
   
   SignalDescriptor(int _numberOfSignals) {
     numberOfSignals = _numberOfSignals;
@@ -37,20 +32,42 @@ class SignalDescriptor{
     return numberOfSignals;
   }
   
+  int getSignalsSize () {
+    int totalBytes = 0;
+    for(int i = 0; i < numberOfSignals; i++) {
+      totalBytes += signalDescriptorVector[i][signalSize];
+    }
+    
+    return totalBytes;
+  }
+  
 }
 
 class AnalogSignal {
-   
+   boolean isUsed = false;
+   int[] dataVector;
   
-  AnalogSignal(){
-   }
+  AnalogSignal( int[] dataVector){
+    isUsed = true;
+    
+    /* Reasigno este objeto al vector global para luego acceder globalmente */
+    for( int i = 0; i < maxNumberOfAnalogSignals;i++) {
+      if(analogSignals[i].isUsed == false) {
+        analogSignals[i] = this;
+      }
+    }
+    
+    /* Guardo el vector de datos de la señal dentro de este objeto */
+    this.dataVector = dataVector;
+    
+  }
 }
 
 
 class DigitalSignal {
-   
+   boolean isUsed;
   
   DigitalSignal(){
-    
-   }
+     isUsed = false;
+  }
 }
