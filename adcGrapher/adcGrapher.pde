@@ -31,6 +31,8 @@ public final int maxNumberOfDigitalSignals = 5;
 public AnalogSignal[] analogSignals = new AnalogSignal[maxNumberOfAnalogSignals];
 public DigitalSignal[] digitalSignals = new DigitalSignal[maxNumberOfDigitalSignals];
 
+GPlot[] digitalPlots = new GPlot[maxNumberOfDigitalSignals];  // Digital Plots
+
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
 int[] predefinedColorR = {  255,   0,   0, 255,   0, 255,};
 int[] predefinedColorG = {    0, 200,   0, 210, 255,   0,};
@@ -114,25 +116,32 @@ void draw() {
       
       /* Segun zoom aplicado dibujo capa de baja calidad */
       float[] xLim = plot1.getXLim();
-      String layerToDraw;
+      int qualy;
       if(xLim[1] - xLim[0] < 3000)        
       {
-        layerToDraw = "main"; 
+        qualy = 0;   // full Res
       }
       else if (xLim[1] - xLim[0] < 13000)
       {
-        layerToDraw = "lowQualy";
+        qualy = 1;  // low Qualy
       }
       else
       {
-        layerToDraw = "superLowQualy";
+        qualy = 2;  // super Low Qualy
       }
       
+      /* Call each analog signal to draw itself*/
+      for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
+        if( analogSignals[signal] != null && analogSignals[signal].isUsed) analogSignals[signal].draw(qualy);
+      }
       
-      plot1.getLayer(layerToDraw).drawPoints();  
-      plot1.getLayer(layerToDraw).drawLines();
       plot1.drawLabels();
       plot1.endDraw();
+      
+      /* Call each digital signal to draw itself*/
+      for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+        if( digitalSignals[signal] != null && digitalSignals[signal].isUsed) digitalSignals[signal].draw(qualy);
+      }
       
       /* Name of file*/
       textAlign(CENTER);
@@ -245,14 +254,16 @@ void loadingText() {
 }
 
 
-void plot1SetConfig() {
+void plotSetConfig() {
+  /* Plot 1: Analog Signals */
+  
   // Create a new plot and set its position on the screen
   plot1 = new GPlot(this);
   plot1.setPos(plotFromX, plotFromY);
   plot1.setDim( plotToX*2-plotFromX+120, plotToY-plotFromY);
   
   // Set the plot title and the axis labels
-  plot1.setTitleText("Timeline Representation of " + nfc(dataFiles[0].getRawDataQuantity()) + " Data Points");
+  plot1.setTitleText("Timeline Representation of Signals");
   plot1.getXAxis().setAxisLabelText("Time [ms]");
   plot1.getYAxis().setAxisLabelText("ADC raw value");
   
@@ -260,13 +271,19 @@ void plot1SetConfig() {
   plot1.getYAxis().setNTicks( 10);
   
   plot1.getXAxis().setNTicks( 10);
-  plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
+  //plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
   plot1.setFixedXLim(true);
   
   // Set plot1 configs
   plot1.activatePointLabels();
   plot1.activateZooming(1.2, CENTER, CENTER);
   plot1.activatePanning();
+  
+  /* Init all the digital plots with empty data */
+  for(int i = 0; i < maxNumberOfDigitalSignals; i++) {
+    digitalPlots[i] = new GPlot(this);
+  }
+  
 }
 
 void loadData(File selection) {
@@ -276,19 +293,26 @@ void loadData(File selection) {
     return;
   }
   String fileName = selection.getName(), fileNamePath = selection.getAbsolutePath();
+  
+  /*  Get if the file has the apropiated file extension */
+  String ext = fileName.substring( fileName.lastIndexOf(".")+1, fileName.length() );
+  
+  if(ext.equals("bin")==false && ext.equals("txt")==false) {
+    javax.swing.JOptionPane.showMessageDialog(null, "Incompatible file extension.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
+    return;
+  }
+  
   loadingText();
   
   SignalDescriptor signalsInFile = new SignalDescriptor(2);
   signalsInFile.setSignal(0,"analog",2);
   signalsInFile.setSignal(1,"digital",1);
   
+  /* Start the plot*/
+  if (dataFileCount == 0 ) plotSetConfig();
+  
   // Initialize the new file
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
-  
-  if (dataFileCount == 0 ) plot1SetConfig();
-  
-  // Add Layers of the new file selected
-  dataFiles[dataFileCount].plotData( plot1 );
   
   // Prepare for the next file
   dataFileCount++;
@@ -300,6 +324,16 @@ void loadData(File selection) {
   //plot1.setXLim(0,20);
   
   firstTimeStarted = false;
+}
+
+void addFile() {
+  if ( dataFileCount >= dataFilesMax ) {
+    javax.swing.JOptionPane.showMessageDialog(null, "Max number of files reached.", "File Input Error", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+  } else {
+    noLoop();
+    File start1 = new File(sketchPath("")+"/*");
+    selectInput("Select a .txt file to representate", "loadData", start1);
+  }
 }
 
 
@@ -377,16 +411,6 @@ void mouseClicked() {
     }
   }
   
-}
-
-void addFile() {
-  if ( dataFileCount >= dataFilesMax ) {
-    javax.swing.JOptionPane.showMessageDialog(null, "Max number of files reached.", "File Input Error", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-  } else {
-    noLoop();
-    File start1 = new File(sketchPath("")+"/*.txt");
-    selectInput("Select a .txt file to representate", "loadData", start1);
-  }
 }
 
 // Pressing 'n' will bring the window to select a new file to add to the plot
