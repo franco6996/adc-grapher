@@ -295,7 +295,7 @@ void loadData(File selection) {
   String fileName = selection.getName(), fileNamePath = selection.getAbsolutePath();
   
   /*  Get if the file has the apropiated file extension */
-  String ext = fileName.substring( fileName.lastIndexOf(".")+1, fileName.length() );
+  String ext = (fileName.substring( fileName.lastIndexOf(".")+1, fileName.length() )).toLowerCase();
   
   if(ext.equals("bin")==false && ext.equals("txt")==false) {
     javax.swing.JOptionPane.showMessageDialog(null, "Incompatible file extension.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
@@ -304,6 +304,7 @@ void loadData(File selection) {
   
   loadingText();
   
+  /* Cargar descriptor de señales en archivo*/
   SignalDescriptor signalsInFile = new SignalDescriptor(2);
   signalsInFile.setSignal(0,"analog",2);
   signalsInFile.setSignal(1,"digital",1);

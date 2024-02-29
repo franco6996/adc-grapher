@@ -24,7 +24,7 @@ class DataFile{
     fileName = file;
     
     /*  Get if the file has the apropiated file extension */
-    String ext = fileName.substring( fileName.lastIndexOf(".")+1 , fileName.length() );
+    String ext = (fileName.substring( fileName.lastIndexOf(".")+1 , fileName.length() )).toLowerCase();
     final int bin_ext = 0;
     final int txt_ext = 1;
     int ext_decode = -1;;
@@ -45,11 +45,24 @@ class DataFile{
           int _byteProcessed = 0;
           /* Procesamiento para cada señale en el tramo */
           for(int _signal = 0; _signal < signalsInFile.getSignalQuantity(); _signal ++) {
-            /* Procesamiento para el tamaño en cada señal */
+            /* Procesamiento para forma de guardado big-endian */
             for( int b = 0; b < signalsInFile.getSignalSize(_signal); b++) {
-              /* Guardo valor correspondiente a X _signal en la posicion correspondiente */
-              signals[_signal][_index] = (signals[_signal][_index] << 8) | rawDataBytes[_pos + _byteProcessed];
+              // Guardo valor correspondiente a X _signal en la posicion correspondiente 
+              signals[_signal][_index] = (signals[_signal][_index] << 8) | int(rawDataBytes[_pos + _byteProcessed]);
               _byteProcessed++;
+            }
+            /* Procesamiento para forma de guardado little-endian */
+            boolean littleEndian = true;
+            if( littleEndian == true) {
+              int _signalSize = signalsInFile.getSignalSize(_signal);
+              byte[] a = new byte[_signalSize];
+              for(int x = 0; x < _signalSize ; x++) {  // guardo todos los bytes por separado
+                a[x] = byte( (signals[_signal][_index]) >> (8*x) );
+              }
+              signals[_signal][_index] = 0;  // reseteo el valor de la muestra
+              for(int x = 0; x < _signalSize ; x++) {  // los almaceno reordenados
+                signals[_signal][_index] = signals[_signal][_index] << 8 | int(a[x]);
+              }
             }
           }
           _index++;

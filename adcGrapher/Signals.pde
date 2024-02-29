@@ -180,36 +180,35 @@ class DigitalSignal {
     
     /* Añado los datos a su respectivas capa según los cambios de señal */
     int x = 0;
-    points.add(x*0.1, dataVector[x]);
-    int lastValue = dataVector[x];
+    int lastValue = dataVector[x] > 0 ? 1 : 0;    // (dataVector[x] > 0 ? 1 : 0) paso de valores a digital 1 o 0.
+    points.add(x*0.1, lastValue);
+    
     while (x < dataVector.length) {  // recorro todo el vector solo añadiendo punto cuando hay una diferencia
       
       /* Si hay un cambio de dato grafico el actual y el anterior*/
-      if( dataVector[x] != lastValue ) {
+      if( (dataVector[x] > 0 ? 1 : 0) != lastValue ) {
         /* Añado el punto a la capa del plot */
         points.add( (x-1)*0.1, lastValue);
-        points.add(x*0.1, dataVector[x]);
+        points.add(x*0.1, (dataVector[x] > 0 ? 1 : 0) );
         
-        lastValue = dataVector[x];
+        lastValue = (dataVector[x] > 0 ? 1 : 0);
       }
       
       x++;
     }
-    points.add((x-1)*0.1, dataVector[x-1]);
+    points.add((x-1)*0.1, (dataVector[x-1] > 0 ? 1 : 0));
     
     /* Add the layers to the plot */
     
     /* Plot 2: Digital Signals */
     // Create a new plot and set its position on the screen
-    digitalPlots[objectNumber].setPos(plotFromX, plotFromY);
-    digitalPlots[objectNumber].setDim( plotToX*2-plotFromX+120, (plotToY-plotFromY)/maxNumberOfDigitalSignals );
+    int plotHigh = (plotToY-plotFromY)/maxNumberOfDigitalSignals; //<>//
+    digitalPlots[objectNumber].setPos(plotFromX, plotFromY + plotHigh * (maxNumberOfDigitalSignals-1) - objectNumber * plotHigh);
+    digitalPlots[objectNumber].setDim( plotToX*2-plotFromX+120, plotHigh);
     
     // Set the plot title and the axis labels
     digitalPlots[objectNumber].getRightAxis().setAxisLabelText("Digital CH" + str(objectNumber));
     digitalPlots[objectNumber].getRightAxis().getAxisLabel().setOffset(10);
-    
-    digitalPlots[objectNumber].getRightAxis().setLim(new float[] { 0, 1});
-    digitalPlots[objectNumber].getRightAxis().setNTicks( 1);
     
     //plot.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
     //plot.setFixedXLim(true);
@@ -223,6 +222,18 @@ class DigitalSignal {
     digitalPlots[objectNumber].addLayer(layerName, points);
     digitalPlots[objectNumber].getLayer(layerName).setFontSize(14);
     
+    /* Set Axis limits */
+    digitalPlots[objectNumber].getRightAxis().setLim(new float[] { 0, 1});
+    digitalPlots[objectNumber].getRightAxis().setNTicks( 1);
+    digitalPlots[objectNumber].getRightAxis().setFixedTicks(true);
+    
+    digitalPlots[objectNumber].getYAxis().setLim(new float[] { 0, 1});
+    digitalPlots[objectNumber].getYAxis().setNTicks(1);
+    digitalPlots[objectNumber].getYAxis().setFixedTicks(true);
+    digitalPlots[objectNumber].setFixedYLim(true);
+    
+    //digitalPlots[objectNumber].setFixedYLim(true);
+    
     /* Set colors */
     digitalPlots[objectNumber].getLayer(layerName).setLineColor(color(0,0,255));
     digitalPlots[objectNumber].getLayer(layerName).setPointColor(color(0,0,255));
@@ -233,10 +244,12 @@ class DigitalSignal {
   /* Draws this signal to the plot */
   void draw( int quality) {  // quality not used in digital, it will draw the minimun amount of points possibles
       digitalPlots[objectNumber].setXLim(plot1.getXLim());
+      digitalPlots[objectNumber].getYAxis().setLim(new float[] { -0.1, 1.1});
       
       digitalPlots[objectNumber].beginDraw();
       digitalPlots[objectNumber].drawRightAxis();
-      digitalPlots[objectNumber].getLayer(layerName).drawPoints();  
+      digitalPlots[objectNumber].drawYAxis();
+      //digitalPlots[objectNumber].getLayer(layerName).drawPoints();  
       digitalPlots[objectNumber].getLayer(layerName).drawLines();
       digitalPlots[objectNumber].endDraw();
    }
