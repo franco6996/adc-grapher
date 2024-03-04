@@ -36,12 +36,20 @@ class DataFile{
         /* Process the .bin file that contains raw data in bytes */
         rawDataBytes = loadBytes(fileNamePath);
         
+        int fileSize = rawDataBytes.length;
+        int signalVectorSize = rawDataBytes.length/signalsInFile.getSignalsSize();
+        
+        if( signalVectorSize > 18000000) {    // Si mi archivo contiene mas de 18 Mega muestras lo limito (media hora a 100us por muestra)
+          signalVectorSize = 18000000;
+          fileSize = signalVectorSize * signalsInFile.getSignalsSize();
+        }
+        
         /* Vector de diferentes señales en archivo */
-        int[][] signals = new int[signalsInFile.getSignalQuantity()][rawDataBytes.length/signalsInFile.getSignalsSize()];  // lugar donde guardo las señales ya convertidas, en el orden del signalDescriptor
+        int[][] signals = new int[signalsInFile.getSignalQuantity()][signalVectorSize];  // lugar donde guardo las señales ya convertidas, en el orden del signalDescriptor
         
         /* Recorro el vector de datos leidos del archivo, en saltos de bytes segun la cantidad de señales */
         int _index = 0;
-        for(int _pos = 0; _pos < rawDataBytes.length; _pos += signalsInFile.getSignalsSize()) {
+        for(int _pos = 0; _pos < fileSize; _pos += signalsInFile.getSignalsSize()) {
           int _byteProcessed = 0;
           /* Procesamiento para cada señale en el tramo */
           for(int _signal = 0; _signal < signalsInFile.getSignalQuantity(); _signal ++) {

@@ -52,6 +52,7 @@ class AnalogSignal {
   String layerName;
   String lq_layerName;
   String slq_layerName;
+  String ulq_layerName;
   
   AnalogSignal( int[] dataVector){
     isUsed = true;
@@ -76,14 +77,17 @@ class AnalogSignal {
     layerName = "Analog_" + str(objectNumber);
     lq_layerName = "lowQualy" + layerName;
     slq_layerName = "superLowQualy" + layerName;
+    ulq_layerName = "ultraLowQualy" + layerName;
     
     /* Divisor de resolución de capas */
-    int slq_scale = 64;
     int lq_scale = 4;
+    int slq_scale = 64;
+    int ulq_scale = 512;
     
     GPointsArray points = new GPointsArray(dataVector.length);  // points of plot
     GPointsArray lowQualyPoints = new GPointsArray(dataVector.length/lq_scale);  // points for low qualy layer
     GPointsArray superLowQualyPoints = new GPointsArray(dataVector.length/slq_scale);  // points for super low qualy layer
+    GPointsArray ultraLowQualyPoints = new GPointsArray(dataVector.length/ulq_scale);  // points for super low qualy layer
     
     /* Añado los datos a sus respectivas capas */
     for (int i = 0; i < dataVector.length; i++) {
@@ -97,6 +101,10 @@ class AnalogSignal {
       if( i % slq_scale == 0 )  //every slq_scale points save one for the super low qualy layer
       {
         superLowQualyPoints.add(i*0.1, dataVector[i]);
+      }
+      if( i % ulq_scale == 0 )  //every slq_scale points save one for the super low qualy layer
+      {
+        ultraLowQualyPoints.add(i*0.1, dataVector[i]);
       }
     }
     
@@ -119,6 +127,12 @@ class AnalogSignal {
     plot1.getLayer(slq_layerName).setPointColor(color(255,0,0));
     plot1.getLayer(slq_layerName).setPointSize(4);
     
+    // Ultra Low Qualy Layer
+    plot1.addLayer(ulq_layerName, ultraLowQualyPoints);
+    plot1.getLayer(ulq_layerName).setFontSize(14);
+    plot1.getLayer(ulq_layerName).setPointColor(color(255,0,0));
+    plot1.getLayer(ulq_layerName).setPointSize(3);
+    
   }
   
   /* Draws this signal to the plot */
@@ -136,9 +150,17 @@ class AnalogSignal {
       case 2:    // super low Qualy
         plot1.getLayer(slq_layerName).drawPoints();  
         plot1.getLayer(slq_layerName).drawLines();
-        break;  
+        break; 
+      case 3:    // ultra low Qualy
+        //plot1.getLayer(ulq_layerName).drawPoints();  
+        plot1.getLayer(ulq_layerName).drawLines();
+        break; 
     }
       
+  }
+  
+  int getSignalLength() {
+    return dataVector.length; 
   }
   
 }
@@ -202,7 +224,7 @@ class DigitalSignal {
     
     /* Plot 2: Digital Signals */
     // Create a new plot and set its position on the screen
-    int plotHigh = (plotToY-plotFromY)/maxNumberOfDigitalSignals; //<>//
+    int plotHigh = (plotToY-plotFromY)/maxNumberOfDigitalSignals;
     digitalPlots[objectNumber].setPos(plotFromX, plotFromY + plotHigh * (maxNumberOfDigitalSignals-1) - objectNumber * plotHigh);
     digitalPlots[objectNumber].setDim( plotToX*2-plotFromX+120, plotHigh);
     
@@ -223,11 +245,11 @@ class DigitalSignal {
     digitalPlots[objectNumber].getLayer(layerName).setFontSize(14);
     
     /* Set Axis limits */
-    digitalPlots[objectNumber].getRightAxis().setLim(new float[] { 0, 1});
+    digitalPlots[objectNumber].getRightAxis().setLim(new float[] { -0.1, 1.1});
     digitalPlots[objectNumber].getRightAxis().setNTicks( 1);
     digitalPlots[objectNumber].getRightAxis().setFixedTicks(true);
     
-    digitalPlots[objectNumber].getYAxis().setLim(new float[] { 0, 1});
+    digitalPlots[objectNumber].getYAxis().setLim(new float[] { -0.1, 1.1});
     digitalPlots[objectNumber].getYAxis().setNTicks(1);
     digitalPlots[objectNumber].getYAxis().setFixedTicks(true);
     digitalPlots[objectNumber].setFixedYLim(true);
@@ -244,11 +266,10 @@ class DigitalSignal {
   /* Draws this signal to the plot */
   void draw( int quality) {  // quality not used in digital, it will draw the minimun amount of points possibles
       digitalPlots[objectNumber].setXLim(plot1.getXLim());
-      digitalPlots[objectNumber].getYAxis().setLim(new float[] { -0.1, 1.1});
+      //digitalPlots[objectNumber].getYAxis().setLim(new float[] { -0.1, 1.1});
       
       digitalPlots[objectNumber].beginDraw();
       digitalPlots[objectNumber].drawRightAxis();
-      digitalPlots[objectNumber].drawYAxis();
       //digitalPlots[objectNumber].getLayer(layerName).drawPoints();  
       digitalPlots[objectNumber].getLayer(layerName).drawLines();
       digitalPlots[objectNumber].endDraw();

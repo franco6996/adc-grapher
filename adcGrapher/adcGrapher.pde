@@ -125,9 +125,13 @@ void draw() {
       {
         qualy = 1;  // low Qualy
       }
-      else
+      else if (xLim[1] - xLim[0] < 100000)
       {
         qualy = 2;  // super Low Qualy
+      }
+      else
+      {
+        qualy = 3;  // ultra Low Qualy
       }
       
       /* Call each analog signal to draw itself*/
@@ -147,6 +151,11 @@ void draw() {
       textAlign(CENTER);
       fill(80);
       text("File: " + dataFiles[0].getFileName(), width/2, height-10);
+      
+      /* Quality used to show */
+      textAlign(RIGHT);
+      fill(150);
+      text("Quality: " + qualy , width-10 , 10);
       
       /* Icons */
       tint(150, 180);
@@ -272,7 +281,7 @@ void plotSetConfig() {
   
   plot1.getXAxis().setNTicks( 10);
   //plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
-  plot1.setFixedXLim(true);
+  //plot1.setFixedXLim(true);
   
   // Set plot1 configs
   plot1.activatePointLabels();
@@ -314,6 +323,12 @@ void loadData(File selection) {
   
   // Initialize the new file
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
+  
+  /* Auto zoom for the first file loaded only */
+  if (dataFileCount == 0 && analogSignals[0] != null) {
+    plot1.getXAxis().setLim(new float[] { 0, (analogSignals[0].getSignalLength())/10 });
+    plot1.setFixedXLim(true);
+  }
   
   // Prepare for the next file
   dataFileCount++;
