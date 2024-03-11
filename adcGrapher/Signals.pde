@@ -54,6 +54,11 @@ class AnalogSignal {
   String slq_layerName;
   String ulq_layerName;
   
+  /* Divisor de resolución de capas */
+  int lq_scale = 4;
+  int slq_scale = 64;
+  int ulq_scale = 512;
+  
   AnalogSignal( int[] dataVector){
     isUsed = true;
     
@@ -78,11 +83,6 @@ class AnalogSignal {
     lq_layerName = "lowQualy" + layerName;
     slq_layerName = "superLowQualy" + layerName;
     ulq_layerName = "ultraLowQualy" + layerName;
-    
-    /* Divisor de resolución de capas */
-    int lq_scale = 4;
-    int slq_scale = 64;
-    int ulq_scale = 512;
     
     GPointsArray points = new GPointsArray(dataVector.length);  // points of plot
     GPointsArray lowQualyPoints = new GPointsArray(dataVector.length/lq_scale);  // points for low qualy layer
@@ -138,25 +138,32 @@ class AnalogSignal {
   /* Draws this signal to the plot */
   void draw( int quality) {
     
+    /* Los limites de los margenes estan directamente relacionado a la ubicacion de los puntos.
+          Por como hago la escala de tiempo, el punto de indice 0 corresponde a la posicion en x del plano cero, y el punto indice 1 correcponde
+          a la posicion x 0,1 */
+    float[] xLim = plot1.getXLim();
+    int indexA = int(xLim[0]) * 10;
+    int indexB = int(xLim[1] * 10); //<>//
+    
     switch(quality) {
-      case 0:    // ful Res
-        plot1.getLayer(layerName).drawPoints();  
-        plot1.getLayer(layerName).drawLines();
+      case 0:    // ful Res //<>//
+        plot1.getLayer(layerName).drawPoints(indexA, indexB);
+        plot1.getLayer(layerName).drawLines( true, indexA, indexB);
         break;
       case 1:    // low Qualy
-        plot1.getLayer(lq_layerName).drawPoints();  
-        plot1.getLayer(lq_layerName).drawLines();
+        plot1.getLayer(lq_layerName).drawPoints(indexA/lq_scale, indexB/lq_scale); 
+        plot1.getLayer(lq_layerName).drawLines( false, indexA/lq_scale, indexB/lq_scale);
         break;
       case 2:    // super low Qualy
-        plot1.getLayer(slq_layerName).drawPoints();  
-        plot1.getLayer(slq_layerName).drawLines();
+        plot1.getLayer(slq_layerName).drawPoints(indexA/slq_scale, indexB/slq_scale);  
+        plot1.getLayer(slq_layerName).drawLines( false, indexA/slq_scale, indexB/slq_scale);
         break; 
       case 3:    // ultra low Qualy
-        //plot1.getLayer(ulq_layerName).drawPoints();  
-        plot1.getLayer(ulq_layerName).drawLines();
+        plot1.getLayer(ulq_layerName).drawPoints(indexA/ulq_scale, indexB/ulq_scale);
+        plot1.getLayer(ulq_layerName).drawLines( false, indexA/ulq_scale, indexB/ulq_scale);
         break; 
     }
-      
+     
   }
   
   int getSignalLength() {
@@ -214,7 +221,7 @@ class DigitalSignal {
         points.add(x*0.1, (dataVector[x] > 0 ? 1 : 0) );
         
         lastValue = (dataVector[x] > 0 ? 1 : 0);
-      }
+      } 
       
       x++;
     }

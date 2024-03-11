@@ -96,6 +96,7 @@ void setup() {
   
 
 }
+
 int test = 0;
 public int plotMode = 0;
 void draw() {
@@ -136,7 +137,7 @@ void draw() {
       
       /* Call each analog signal to draw itself*/
       for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
-        if( analogSignals[signal] != null && analogSignals[signal].isUsed) analogSignals[signal].draw(qualy);
+        if( analogSignals[signal] != null && analogSignals[signal].isUsed)  analogSignals[signal].draw(qualy);
       }
       
       plot1.drawLabels();
@@ -279,12 +280,12 @@ void plotSetConfig() {
   plot1.getYAxis().setLim(new float[] { 0, 4100});
   plot1.getYAxis().setNTicks( 10);
   
-  plot1.getXAxis().setNTicks( 10);
+  plot1.getXAxis().setNTicks( 15);
   //plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
   //plot1.setFixedXLim(true);
   
   // Set plot1 configs
-  plot1.activatePointLabels();
+  plot1.activatePointLabels(RIGHT);
   plot1.activateZooming(1.2, CENTER, CENTER);
   plot1.activatePanning();
   
@@ -325,10 +326,11 @@ void loadData(File selection) {
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
   
   /* Auto zoom for the first file loaded only */
-  if (dataFileCount == 0 && analogSignals[0] != null) {
-    plot1.getXAxis().setLim(new float[] { 0, (analogSignals[0].getSignalLength())/10 });
-    plot1.setFixedXLim(true);
-  }
+  if (dataFileCount == 0 ) {
+    float[] a = {0,dataFiles[0].getRawDataQuantity()/10};
+    plot1.getXAxis().setLim(a);
+    plot1.setXLim(a);
+  } 
   
   // Prepare for the next file
   dataFileCount++;
@@ -336,8 +338,6 @@ void loadData(File selection) {
   plotMode = 1;
   
   loop();
-  
-  //plot1.setXLim(0,20);
   
   firstTimeStarted = false;
 }
@@ -393,6 +393,16 @@ void deleteFile () {
  
  dataFiles[0] = null;
  plot1 = null;
+ 
+ /* Delete each analog signal */
+  for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
+    if( analogSignals[signal] != null )  analogSignals[signal] = null;
+  }
+      
+  /* Delete each digital signal */
+  for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+    if( digitalSignals[signal] != null )  digitalSignals[signal] = null;
+  }
  
  plotMode = 0;
  dataFileCount = 0;
