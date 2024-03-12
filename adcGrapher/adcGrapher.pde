@@ -327,9 +327,10 @@ void loadData(File selection) {
   
   /* Auto zoom for the first file loaded only */
   if (dataFileCount == 0 ) {
-    float[] a = {0,dataFiles[0].getRawDataQuantity()/10};
-    plot1.getXAxis().setLim(a);
-    plot1.setXLim(a);
+    int b = dataFiles[0].getRawDataQuantity()/10;
+    float[] a = {0, (float)b};
+    //plot1.getXAxis().setLim(a);
+    //plot1.setXLim(a);
   } 
   
   // Prepare for the next file

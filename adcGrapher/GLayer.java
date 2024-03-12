@@ -268,7 +268,7 @@ public class GLayer implements PConstants {
 	 */
 	protected void updatePlotPoints() {
 		int nPoints = points.getNPoints();
-
+    
 		// Go case by case. More code, but it should be faster
 		if (xLog && yLog) {
 			float xScalingFactor = dim[0] / PApplet.log(xLim[1] / xLim[0]);
@@ -312,6 +312,7 @@ public class GLayer implements PConstants {
 		if (plotPoints.getNPoints() > nPoints) {
 			plotPoints.setNPoints(nPoints);
 		}
+
 	}
 
 	/**
@@ -405,11 +406,85 @@ public class GLayer implements PConstants {
 
 		// Refill the list
 		int nPoints = plotPoints.getNPoints();
-
-		for (int i = 0; i < nPoints; i++) {
-			inside.add(isInside(plotPoints.get(i)));
-		}
+    
+    // Salgo si no tengo puntos
+    if( nPoints == 0) return;
+    
+    // Si tengo pocos puntos resuelvo sin multi thread
+    if( nPoints < 15000 ) {
+      for (int i = 0; i < nPoints; i++) {
+        inside.add(isInside(plotPoints.get(i)));
+      }
+    } else {
+      
+      // Calculate this in a threaded way
+      int maxTh = 3;
+      UpdateInsideListThread[] th = new UpdateInsideListThread[maxTh];
+      
+      // Create all threads with proper values
+      for (int x = 0; x < maxTh; x++) {
+        float from,to;
+        from = ( (float)nPoints / (float)maxTh )*x;
+        to = ( (float)nPoints / (float)maxTh) * (1+x);
+        th[x] = new UpdateInsideListThread( (int)from, (int)to); 
+        th[x].start();
+      }
+      
+      // Wait until all threads ends
+      int ready = 0;
+      do{
+        try {Thread.sleep(1);} catch (InterruptedException e) {throw new RuntimeException(e);}
+        ready = 0;
+        for (int x = 0; x < maxTh; x++) {
+          if( th[x].inUse() ) {
+            ready++;
+            
+          };
+        }
+      }while(ready > 0);
+      
+      // Add all threads calculation
+      for (int i = 0; i < maxTh; i++) {
+        ArrayList<Boolean> ins = new ArrayList<Boolean>();
+        ins = th[i].getInsideList();
+        inside.addAll( ins );
+      }
+      
+    } //<>// //<>//
+    
+    
 	}
+  
+  /**
+   * Threaded calculation for updateInsideList()
+   */
+  private class UpdateInsideListThread extends Thread{
+    
+    ArrayList<Boolean> inside1 = new ArrayList<Boolean>();
+    int from, to;
+    boolean inUse;
+    
+    UpdateInsideListThread(int from, int to) {
+      this.from = from;
+      this.to = to;
+      this.inUse = true;
+    }
+    
+    boolean inUse() {return inUse;}
+    
+    ArrayList<Boolean> getInsideList() { return inside1;}
+    
+    public void run(){
+      inside1.clear();
+      
+      for (int i = from; i < to; i++) {
+        inside1.add(isInside(plotPoints.get(i)));
+      }
+      
+      this.inUse = false;
+    }
+    
+  }
 
 	/**
 	 * Returns the position index of the closest point (if any) to a given position in the plot reference system
@@ -760,6 +835,7 @@ public class GLayer implements PConstants {
     int nSizes = pointSizes.length;
     
     indexA = indexA < 0 ? 0 : indexA;
+    indexB = indexB < indexA ? nPoints : indexB;
     indexB = indexB >= plotPoints.getNPoints() ? nPoints : indexB+1;
 
     parent.pushStyle();
@@ -994,6 +1070,7 @@ public class GLayer implements PConstants {
     parent.strokeCap(SQUARE);
     
     indexA = indexA < 0 ? 0 : indexA;
+    indexB = indexB <=indexA ? (plotPoints.getNPoints() - 1) : indexB;
     indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB+1;
 
     for (int i = indexA; i < indexB; i++) {

@@ -143,10 +143,10 @@ class AnalogSignal {
           a la posicion x 0,1 */
     float[] xLim = plot1.getXLim();
     int indexA = int(xLim[0]) * 10;
-    int indexB = int(xLim[1] * 10); //<>//
+    int indexB = int(xLim[1] * 10);
     
     switch(quality) {
-      case 0:    // ful Res //<>//
+      case 0:    // ful Res
         plot1.getLayer(layerName).drawPoints(indexA, indexB);
         plot1.getLayer(layerName).drawLines( true, indexA, indexB);
         break;

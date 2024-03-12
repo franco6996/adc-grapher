@@ -38,12 +38,14 @@ class DataFile{
         
         int fileSize = rawDataBytes.length;
         int signalVectorSize = rawDataBytes.length/signalsInFile.getSignalsSize();
-        this.rawDataQuantity = signalVectorSize;  // almaceno el numero de muestras del archivo
+        
         
         if( signalVectorSize > 18000000) {    // Si mi archivo contiene mas de 18 Mega muestras lo limito (media hora a 100us por muestra)
           signalVectorSize = 18000000;
           fileSize = signalVectorSize * signalsInFile.getSignalsSize();
         }
+        
+        this.rawDataQuantity = signalVectorSize;  // almaceno el numero de muestras del archivo
         
         /* Vector de diferentes señales en archivo */
         int[][] signals = new int[signalsInFile.getSignalQuantity()][signalVectorSize];  // lugar donde guardo las señales ya convertidas, en el orden del signalDescriptor
