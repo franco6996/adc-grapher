@@ -177,6 +177,11 @@ class DigitalSignal {
   boolean isUsed = false;  // object in use
   int objectNumber;        // number assigned to this object
   int[] dataVector;
+  int pulseCounter = 0;    // contador de pulsos digitales (flanco ascendente)
+  
+  float plotOffset = 0;              // offset of the plot position
+  boolean movingOffset = false;    // dictate if the plot is in panning mode
+  float[] xLimitClone;              // clone of the X limit when calculating offset
    
   /* Nombre capas donde guardo la info segun su calidad */
   String layerName;
@@ -214,13 +219,20 @@ class DigitalSignal {
     
     while (x < dataVector.length) {  // recorro todo el vector solo añadiendo punto cuando hay una diferencia
       
+      int currentValue = dataVector[x] > 0 ? 1 : 0;
+      
       /* Si hay un cambio de dato grafico el actual y el anterior*/
-      if( (dataVector[x] > 0 ? 1 : 0) != lastValue ) {
+      if( currentValue != lastValue ) {
         /* Añado el punto a la capa del plot */
         points.add( (x-1)*0.1, lastValue);
-        points.add(x*0.1, (dataVector[x] > 0 ? 1 : 0) );
+        points.add(x*0.1, currentValue );
         
-        lastValue = (dataVector[x] > 0 ? 1 : 0);
+        // Si el cambio fue de flanco ascendente sumo al contador de pulsos
+        if( currentValue > lastValue ) {
+          this.pulseCounter++;
+        }
+        
+        lastValue = currentValue;
       } 
       
       x++;
@@ -236,7 +248,7 @@ class DigitalSignal {
     digitalPlots[objectNumber].setDim( plotToX*2-plotFromX+120, plotHigh);
     
     // Set the plot title and the axis labels
-    digitalPlots[objectNumber].getRightAxis().setAxisLabelText("Digital CH" + str(objectNumber));
+    digitalPlots[objectNumber].getRightAxis().setAxisLabelText("Digital CH" + str(objectNumber+1));
     digitalPlots[objectNumber].getRightAxis().getAxisLabel().setOffset(10);
     
     //plot.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
@@ -272,8 +284,15 @@ class DigitalSignal {
   
   /* Draws this signal to the plot */
   void draw( int quality) {  // quality not used in digital, it will draw the minimun amount of points possibles
-      digitalPlots[objectNumber].setXLim(plot1.getXLim());
-      //digitalPlots[objectNumber].getYAxis().setLim(new float[] { -0.1, 1.1});
+      
+      // Draw the plot in the same position that the analog one, plus an offset
+      if( !movingOffset ) {
+        float[] xLim = plot1.getXLim(); //<>//
+        xLim[0] = xLim[0] + plotOffset;
+        xLim[1] = xLim[1] + plotOffset;
+        digitalPlots[objectNumber].setXLim( xLim ); //<>//
+      }
+      digitalPlots[objectNumber].setYLim(new float[] { -0.1, 1.1});
       
       digitalPlots[objectNumber].beginDraw();
       digitalPlots[objectNumber].drawRightAxis();
@@ -281,5 +300,62 @@ class DigitalSignal {
       digitalPlots[objectNumber].getLayer(layerName).drawLines();
       digitalPlots[objectNumber].endDraw();
    }
+  
+  // Get the quantity of pulses detected in ascendent flank
+  int getPulseCount () {
+    return pulseCounter;
+  }
+  
+  void applyPlotOffset() {
+    if(movingOffset) {
+      stopMovingPlotSignal();
+    }
+    else {
+      startMovingPlotSignal();
+    }
+  }
+  
+  void startMovingPlotSignal() {
+    this.movingOffset = true;
+    
+    plot1.deactivatePanning();  // deactivate the principal panning
+    plot1.deactivateZooming();  // deactivate the principal zoom so no deformation occour
+    
+    xLimitClone = digitalPlots[objectNumber].getXLim();  // clone the actual limit
+    
+    // activate the panning of this plot for the user to move
+    digitalPlots[objectNumber].activatePanning();
+    
+    // put a different color so the user can notise
+    digitalPlots[objectNumber].getLayer(layerName).setLineColor(color(0,180,0));
+    
+  }
+  
+  void stopMovingPlotSignal() {
+    
+    //deactivate the panning
+    digitalPlots[objectNumber].deactivatePanning();
+    
+    float[] currentLimit = digitalPlots[objectNumber].getXLim();  // get the current limit after user movement
+    
+    this.plotOffset = this.plotOffset + currentLimit[0] - xLimitClone[0];  // whit only one axis valua already can calc the offset becouse there is no zoom //<>//
+    
+    // return original color
+    digitalPlots[objectNumber].getLayer(layerName).setLineColor(color(0,0,255));
+    
+    this.movingOffset = false;
+    
+    //reactivate zoom and panning in principal plot if this is the only signal panning
+    for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+      if( digitalSignals[signal] != null && digitalSignals[signal].isUsed && digitalSignals[signal].isApplingPlotOffset() )      return;
+    }
+    plot1.activateZooming(1.2, CENTER, CENTER);
+    plot1.activatePanning();
+    // warning: code added after this may be not runned becouse RETURN is performed before
+  }
+  
+  boolean isApplingPlotOffset() {
+    return movingOffset;
+  }
   
 }

@@ -74,12 +74,12 @@ void setup() {
   imgConfig.filter(GRAY);
   imgDelete = loadImage("data/delete.png");
   imgDelete.filter(GRAY);
-  imgExport = loadImage("data/export.png");
-  imgExport.filter(GRAY);
+  /*imgExport = loadImage("data/export.png");
+  imgExport.filter(GRAY);*/
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
-  imgM = loadImage("data/m.png");
-  imgM.filter(GRAY);
+  /*imgM = loadImage("data/m.png");
+  imgM.filter(GRAY);*/
   
   // Check for new Updates
   thread("checkUpdates");
@@ -110,7 +110,7 @@ void draw() {
       plot1.beginDraw();
       plot1.drawBackground();
       plot1.drawBox();
-      plot1.drawYAxis();
+      if( analogSignals[0] != null) plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
       drawMarkers();
@@ -161,8 +161,8 @@ void draw() {
       /* Icons */
       tint(150, 180);
       image(imgDelete, width-10-20 ,    height-10-16, 24, 24);
-      image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-      image(imgM,      width-10-20-60 , height-10-16, 24, 24);
+      //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
+      //image(imgM,      width-10-20-60 , height-10-16, 24, 24);
     break;
     
     default:  // Default view
@@ -315,9 +315,11 @@ void loadData(File selection) {
   loadingText();
   
   /* Cargar descriptor de señales en archivo*/
-  SignalDescriptor signalsInFile = new SignalDescriptor(2);
-  signalsInFile.setSignal(0,"analog",2);
+  SignalDescriptor signalsInFile = new SignalDescriptor(4);
+  signalsInFile.setSignal(0,"digital",1);
   signalsInFile.setSignal(1,"digital",1);
+  signalsInFile.setSignal(2,"digital",1);
+  signalsInFile.setSignal(3,"digital",1);
   
   /* Start the plot*/
   if (dataFileCount == 0 ) plotSetConfig();
@@ -330,7 +332,7 @@ void loadData(File selection) {
     int b = dataFiles[0].getRawDataQuantity()/10;
     float[] a = {0, (float)b};
     //plot1.getXAxis().setLim(a);
-    //plot1.setXLim(a);
+    plot1.setXLim(a);
   } 
   
   // Prepare for the next file
@@ -421,10 +423,10 @@ void mouseClicked() {
     if (mouseX >=  width-10-20 && mouseX <=  width && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       deleteFile();
       
-    if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
-      exportFile(0);
+    /*if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
+      exportFile(0);*/
       
-    if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
+    /*if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
     {
       if(drawPlotMarkers==false)
       {
@@ -435,7 +437,7 @@ void mouseClicked() {
       {
         drawPlotMarkers = false;
       }
-    }
+    }*/
   }
   
 }
@@ -453,7 +455,7 @@ void keyReleased() {
     case 'E':
       exportFile(0);
     break;
-    case 'M':
+    /*case 'M':
       if(drawPlotMarkers==false)
       {
         Boolean rtn_error = dataFiles[0].getMarkers();
@@ -464,6 +466,31 @@ void keyReleased() {
         drawPlotMarkers = false;
       }
       
+    break;*/
+    case 'C':  // digital signal pulse counter
+    String counterOutput = new String();
+    
+    /* Call each digital signal to return counter value */
+    for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+      if( digitalSignals[signal] != null && digitalSignals[signal].isUsed) {
+        
+        counterOutput +=  "\nDigital CH" + str(signal+1) + ": " + digitalSignals[signal].getPulseCount();
+        
+      }
+    }
+    javax.swing.JOptionPane.showMessageDialog(null, counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+    break;
+    case '1':
+      if( digitalSignals[0] != null && digitalSignals[0].isUsed) digitalSignals[0].applyPlotOffset();
+    break;
+    case '2':
+      if( digitalSignals[1] != null && digitalSignals[1].isUsed) digitalSignals[1].applyPlotOffset();
+    break;
+    case '3':
+      if( digitalSignals[2] != null && digitalSignals[2].isUsed) digitalSignals[2].applyPlotOffset();
+    break;
+    case '4':
+      if( digitalSignals[3] != null && digitalSignals[3].isUsed) digitalSignals[3].applyPlotOffset();
     break;
   }
 }
