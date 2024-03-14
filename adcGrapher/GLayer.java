@@ -1794,8 +1794,31 @@ public class GLayer implements PConstants {
 			} else {
 				xLim[0] = xMin;
 				xLim[1] = xMax;
-				updatePlotPoints();
-				updateInsideList();
+
+        Thread th1 = new Thread(){
+          public void run(){
+            updatePlotPoints();
+          }
+        };
+        th1.start();
+        
+        Thread th2 = new Thread(){
+          public void run(){
+            updateInsideList();
+          }
+        };
+        th2.start();
+        
+        for(;;) {
+          try {Thread.sleep(1);} catch (InterruptedException e) {throw new RuntimeException(e);}
+          if( !th2.isAlive() && !th2.isAlive() ) break;
+        }
+        
+        th1 = null;
+        th2 = null;
+
+				//updatePlotPoints();
+				//updateInsideList();
 
 				if (hist != null) {
 					hist.setPlotPoints(plotPoints);
@@ -1827,8 +1850,31 @@ public class GLayer implements PConstants {
 			} else {
 				yLim[0] = yMin;
 				yLim[1] = yMax;
-				updatePlotPoints();
-				updateInsideList();
+				
+        Thread th1 = new Thread(){
+          public void run(){
+            updatePlotPoints();
+          }
+        };
+        th1.start();
+        
+        Thread th2 = new Thread(){
+          public void run(){
+            updateInsideList();
+          }
+        };
+        th2.start();
+        
+        th1 = null;
+        th2 = null;
+        
+        for(;;) {
+          try {Thread.sleep(1);} catch (InterruptedException e) {throw new RuntimeException(e);}
+          if( !th2.isAlive() && !th2.isAlive() ) break;
+        }
+
+        //updatePlotPoints();
+				//updateInsideList();
 
 				if (hist != null) {
 					hist.setPlotPoints(plotPoints);
@@ -1871,9 +1917,31 @@ public class GLayer implements PConstants {
 				yLim[0] = yMin;
 				yLim[1] = yMax;
 			}
-
-			updatePlotPoints();
-			updateInsideList();
+      
+      Thread th1 = new Thread(){
+        public void run(){
+          updatePlotPoints();
+        }
+      };
+      th1.start();
+      
+      Thread th2 = new Thread(){
+        public void run(){
+          updateInsideList();
+        }
+      };
+      th2.start();
+      
+      for(;;) {
+        try {Thread.sleep(1);} catch (InterruptedException e) {throw new RuntimeException(e);}
+        if( !th2.isAlive() && !th2.isAlive() ) break;
+      }
+      
+      th1 = null;
+      th2 = null;
+      
+			//updatePlotPoints();
+			//updateInsideList();
 
 			if (hist != null) {
 				hist.setPlotPoints(plotPoints);
