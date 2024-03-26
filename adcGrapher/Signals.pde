@@ -1,3 +1,95 @@
+
+import java.io.*;
+SignalDescriptor getSignalPropierties (String currentPath) {
+  // Busco el archivo con las propiedades de las señanles dentro de la misma carpeta
+  currentPath = currentPath.substring(0, 1+currentPath.lastIndexOf("\\"));
+  String propertiesPath = currentPath + "signals.properties";
+  println(propertiesPath);
+  
+  Properties properties = new Properties();
+  FileInputStream inputFile;
+  try { inputFile = new FileInputStream(propertiesPath); } catch (Exception e) {inputFile = null; }
+  
+    // Si no existe, tomo el default dentro de la carpeta de instalacion del programa
+    if (inputFile == null) {
+      propertiesPath = sketchPath("") + "signals.properties";
+      println("No se encuentra descriptor de señales, cargando default: " + propertiesPath);
+      try { inputFile = new FileInputStream(propertiesPath); } catch (Exception e) {inputFile = null; }
+      
+      // Si el archivo default falla lo creo
+      if (inputFile == null) {
+        createSignalPropertiesFile();
+        try { inputFile = new FileInputStream(propertiesPath); } catch (Exception e) {}
+      }
+      
+    }
+  
+  // Cargo el archivo y extraigo sus propiedades creando el descriptor de señales
+  try { properties.load(inputFile); } catch (Exception e) {println("Input Error!");}
+  
+  if( properties.getProperty("numberOfSignals") == null) {
+      javax.swing.JOptionPane.showMessageDialog(
+                    null,"Error de entrada.\nRevise archivo 'signals.properties'", "oops!",
+                    javax.swing.JOptionPane.ERROR_MESSAGE | javax.swing.JOptionPane.OK_OPTION);
+  }
+  
+  int numberOfSignals = int(properties.getProperty("numberOfSignals"));
+  
+  SignalDescriptor signalDescriptor = new SignalDescriptor(numberOfSignals); //<>//
+  
+  for(int x = 1; x <= numberOfSignals; x++){
+    String signalSize = properties.getProperty("signal" + x + "Size");
+    String signalType = properties.getProperty("signal" + x + "Type");
+    String signalName = properties.getProperty("signal" + x + "Name");
+    
+    if( signalSize == null || signalType == null || signalName == null) {
+      javax.swing.JOptionPane.showMessageDialog(
+                    null,"Error de entrada.\nRevise archivo 'signals.properties'", "oops!",
+                    javax.swing.JOptionPane.ERROR_MESSAGE | javax.swing.JOptionPane.OK_OPTION);
+    }
+    
+    signalDescriptor.setSignal( x-1, signalType, int(signalSize) );
+  }
+  
+  return signalDescriptor;
+}
+
+/*
+ *  Writes to the program path the default signal descriptor file
+ */
+void createSignalPropertiesFile(){
+  println("Sigal Properties file not exist. Creating a default one.");
+  String[] signalPropertiesFile = new String[18];
+  
+  /* Write text default */
+  signalPropertiesFile[0] = "#########################################################################";
+  signalPropertiesFile[1] = "# This file sets the input file data format of multiple signals";
+  signalPropertiesFile[2] = "#";
+  signalPropertiesFile[3] = "# Signal number must be in the order stored inside the input file";
+  signalPropertiesFile[4] = signalPropertiesFile[0];
+  
+  signalPropertiesFile[5] = "";
+  
+  signalPropertiesFile[6] = "# Total number of signals in the file.";
+  signalPropertiesFile[7] = "numberOfSignals=2";
+  
+  signalPropertiesFile[8] = "";
+  
+  signalPropertiesFile[9] = "# Signal 1";
+  signalPropertiesFile[10] = "signal1Name=adcSignal";
+  signalPropertiesFile[11] = "signal1Size=2";
+  signalPropertiesFile[12] = "signal1Type=analog";
+  
+  signalPropertiesFile[13] = "";
+  
+  signalPropertiesFile[14] = "# Signal 2";
+  signalPropertiesFile[15] = "signal2Name=digitalSignal";
+  signalPropertiesFile[16] = "signal2Size=1";
+  signalPropertiesFile[17] = "signal2Type=digital";
+  
+  saveStrings("signals.properties",signalPropertiesFile);
+}
+
 class SignalDescriptor{
   int[][] signalDescriptorVector;    /* [0]Signal Tipe: Analog = 0, Digital = 1 -  [1]Signal Bytes  */
   final int signalType = 0, signalSize = 1;
@@ -287,10 +379,10 @@ class DigitalSignal {
       
       // Draw the plot in the same position that the analog one, plus an offset
       if( !movingOffset ) {
-        float[] xLim = plot1.getXLim(); //<>//
+        float[] xLim = plot1.getXLim();
         xLim[0] = xLim[0] + plotOffset;
         xLim[1] = xLim[1] + plotOffset;
-        digitalPlots[objectNumber].setXLim( xLim ); //<>//
+        digitalPlots[objectNumber].setXLim( xLim );
       }
       digitalPlots[objectNumber].setYLim(new float[] { -0.1, 1.1});
       
@@ -338,7 +430,7 @@ class DigitalSignal {
     
     float[] currentLimit = digitalPlots[objectNumber].getXLim();  // get the current limit after user movement
     
-    this.plotOffset = this.plotOffset + currentLimit[0] - xLimitClone[0];  // whit only one axis valua already can calc the offset becouse there is no zoom //<>//
+    this.plotOffset = this.plotOffset + currentLimit[0] - xLimitClone[0];  // whit only one axis valua already can calc the offset becouse there is no zoom
     
     // return original color
     digitalPlots[objectNumber].getLayer(layerName).setLineColor(color(0,0,255));

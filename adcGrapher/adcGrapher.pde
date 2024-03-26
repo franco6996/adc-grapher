@@ -315,11 +315,7 @@ void loadData(File selection) {
   loadingText();
   
   /* Cargar descriptor de señales en archivo*/
-  SignalDescriptor signalsInFile = new SignalDescriptor(4);
-  signalsInFile.setSignal(0,"digital",1);
-  signalsInFile.setSignal(1,"digital",1);
-  signalsInFile.setSignal(2,"digital",1);
-  signalsInFile.setSignal(3,"digital",1);
+  SignalDescriptor signalsInFile = getSignalPropierties( fileNamePath);
   
   /* Start the plot*/
   if (dataFileCount == 0 ) plotSetConfig();
