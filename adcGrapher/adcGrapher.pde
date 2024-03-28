@@ -52,8 +52,6 @@ public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
-  
-  //smooth(4);
 }
 
 void setup() {
@@ -74,12 +72,8 @@ void setup() {
   imgConfig.filter(GRAY);
   imgDelete = loadImage("data/delete.png");
   imgDelete.filter(GRAY);
-  /*imgExport = loadImage("data/export.png");
-  imgExport.filter(GRAY);*/
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
-  /*imgM = loadImage("data/m.png");
-  imgM.filter(GRAY);*/
   
   // Check for new Updates
   thread("checkUpdates");
@@ -89,8 +83,6 @@ void setup() {
   
   plotMode = 0;
   
-  
-  //noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
   
@@ -113,7 +105,6 @@ void draw() {
       if( analogSignals[0] != null) plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
-      drawMarkers();
       
       /* Segun zoom aplicado dibujo capa de baja calidad */
       float[] xLim = plot1.getXLim();
@@ -172,37 +163,13 @@ void draw() {
       imageMode(CORNER);
       textAlign(CENTER);
       textSize(14);
-      text("Load a '.txt' file that contains 16bits hexadecimal values", width/2, (height/2)+130);
-      text("with no comma or separation", width/2, (height/2)+148);
+      text("Load a '.txt' or '.bin' file that contains ", width/2, (height/2)+130);
+      text("a number of signals recorded represented by 'signals.properties'", width/2, (height/2)+148);
     break;
   }
   
   // Show information text arround the window
   showInfoText();
-}
-
-void drawMarkers()
-{
-  if ( drawPlotMarkers == true)
-  {
-    float yMarkerPos1 =  plot1.getYLim()[0]+0.7*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos2 =  plot1.getYLim()[0]+0.85*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos3 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos4 =  plot1.getYLim()[0]+1.15*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    for(int i=0; i< numberOfPlotMarkers; i++)
-    {
-      plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
-      if(plotMarkersText[i] == "RESET")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado 
-      else if(plotMarkersText[i] == "NO PULSO")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
-      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos3, LEFT, CENTER); // le pongo el texto almacenado
-      else
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos4, LEFT, CENTER); // le pongo el texto almacenado
-    }
-    
-  }
 }
 
 int helpNumber = 0;
@@ -215,7 +182,7 @@ void showInfoText() {
       if ( helpNumber > 0 )  helpNumber = 0;
     }
     if ( plotMode == 1) {
-      if ( helpNumber > 3 )  helpNumber = 0;
+      if ( helpNumber > 1 )  helpNumber = 0;
     }
     time = millis();
   }
@@ -234,12 +201,6 @@ void showInfoText() {
         text("Press 'Delete' to close the open file", 10, height-10);
       break;
       case 1:
-        text("Press 'E' to export the file", 10, height-10);
-      break;
-      case 2:
-        text("Press 'M' to show markers of the pulses", 10, height-10);
-      break;
-      case 3:
         text("Press the Arrow Keys to expand or contract the graph", 10, height-10);
       break;
     }
@@ -281,8 +242,6 @@ void plotSetConfig() {
   plot1.getYAxis().setNTicks( 10);
   
   plot1.getXAxis().setNTicks( 15);
-  //plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
-  //plot1.setFixedXLim(true);
   
   // Set plot1 configs
   plot1.activatePointLabels(RIGHT);
@@ -351,40 +310,6 @@ void addFile() {
   }
 }
 
-
-void exportFile (int numberExport) {
-  if ( dataFileCount == 0 ) return;
-  
-  /*  Ask what type of file to export  */
-  String[] options = {".h",".csv"};
-  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)\n-SeedAnalizer format (.csv)", "Export File",
-  javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
-  null, options, options[0]);
-  
-  
-  if ( format != -1 ) {
-    /*  Export indicated File  */
-    dataFiles[ numberExport ].exportToFile( format );
-  }
-  else {
-    /*  Show error  */
-    javax.swing.JOptionPane.showMessageDialog(null, "Error exporting the file!", "Export File", javax.swing.JOptionPane.ERROR_MESSAGE);
-  }
-  
-}
-
-public String timeStampsFilePath;
-public boolean timeStampsFilePathLoaded;
-public void setTimeStampsFile( File selection ) {
-    if (selection == null) {
-      javax.swing.JOptionPane.showMessageDialog(null, "No file selected.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
-      loop();
-      return;
-    }
-    timeStampsFilePath = selection.getAbsolutePath();
-    timeStampsFilePathLoaded = true;
-}
-
 void deleteFile () {
  if ( dataFileCount == 0 ) return;
  
@@ -418,22 +343,6 @@ void mouseClicked() {
     
     if (mouseX >=  width-10-20 && mouseX <=  width && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       deleteFile();
-      
-    /*if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
-      exportFile(0);*/
-      
-    /*if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
-    {
-      if(drawPlotMarkers==false)
-      {
-        Boolean rtn_error = dataFiles[0].getMarkers();
-        if( rtn_error == false) drawPlotMarkers = true;
-      }
-      else
-      {
-        drawPlotMarkers = false;
-      }
-    }*/
   }
   
 }
@@ -441,28 +350,16 @@ void mouseClicked() {
 // Pressing 'n' will bring the window to select a new file to add to the plot
 void keyReleased() {
   switch (key) {
+
     case 'N':
       if (plotMode != 0) return;
       addFile();
     break;
+
     case DELETE:
       deleteFile();
     break;
-    case 'E':
-      exportFile(0);
-    break;
-    /*case 'M':
-      if(drawPlotMarkers==false)
-      {
-        Boolean rtn_error = dataFiles[0].getMarkers();
-        if( rtn_error == false) drawPlotMarkers = true;
-      }
-      else
-      {
-        drawPlotMarkers = false;
-      }
-      
-    break;*/
+
     case 'C':  // digital signal pulse counter
     String counterOutput = new String();
     
@@ -476,6 +373,8 @@ void keyReleased() {
     }
     javax.swing.JOptionPane.showMessageDialog(null, counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
     break;
+
+    // Move digital signals
     case '1':
       if( digitalSignals[0] != null && digitalSignals[0].isUsed) digitalSignals[0].applyPlotOffset();
     break;
@@ -487,6 +386,9 @@ void keyReleased() {
     break;
     case '4':
       if( digitalSignals[3] != null && digitalSignals[3].isUsed) digitalSignals[3].applyPlotOffset();
+    break;
+    case '5':
+      if( digitalSignals[4] != null && digitalSignals[4].isUsed) digitalSignals[4].applyPlotOffset();
     break;
   }
 }

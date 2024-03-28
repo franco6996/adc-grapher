@@ -35,7 +35,7 @@ SignalDescriptor getSignalPropierties (String currentPath) {
   
   int numberOfSignals = int(properties.getProperty("numberOfSignals"));
   
-  SignalDescriptor signalDescriptor = new SignalDescriptor(numberOfSignals); //<>//
+  SignalDescriptor signalDescriptor = new SignalDescriptor(numberOfSignals);
   
   for(int x = 1; x <= numberOfSignals; x++){
     String signalSize = properties.getProperty("signal" + x + "Size");
@@ -176,7 +176,7 @@ class AnalogSignal {
     slq_layerName = "superLowQualy" + layerName;
     ulq_layerName = "ultraLowQualy" + layerName;
     
-    GPointsArray points = new GPointsArray(dataVector.length);  // points of plot
+    GPointsArray points = new GPointsArray(dataVector.length);  // points of plot //<>//
     GPointsArray lowQualyPoints = new GPointsArray(dataVector.length/lq_scale);  // points for low qualy layer
     GPointsArray superLowQualyPoints = new GPointsArray(dataVector.length/slq_scale);  // points for super low qualy layer
     GPointsArray ultraLowQualyPoints = new GPointsArray(dataVector.length/ulq_scale);  // points for super low qualy layer
@@ -343,15 +343,11 @@ class DigitalSignal {
     digitalPlots[objectNumber].getRightAxis().setAxisLabelText("Digital CH" + str(objectNumber+1));
     digitalPlots[objectNumber].getRightAxis().getAxisLabel().setOffset(10);
     
-    //plot.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
-    //plot.setFixedXLim(true);
-    
     // Set plot configs
     digitalPlots[objectNumber].activatePointLabels();
     digitalPlots[objectNumber].getRightAxis().setDrawTickLabels(true);  // make the axis of this plot visible
     
     /* Add points to the plot */
-    
     digitalPlots[objectNumber].addLayer(layerName, points);
     digitalPlots[objectNumber].getLayer(layerName).setFontSize(14);
     
@@ -364,8 +360,6 @@ class DigitalSignal {
     digitalPlots[objectNumber].getYAxis().setNTicks(1);
     digitalPlots[objectNumber].getYAxis().setFixedTicks(true);
     digitalPlots[objectNumber].setFixedYLim(true);
-    
-    //digitalPlots[objectNumber].setFixedYLim(true);
     
     /* Set colors */
     digitalPlots[objectNumber].getLayer(layerName).setLineColor(color(0,0,255));
