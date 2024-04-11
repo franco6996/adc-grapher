@@ -1,107 +1,137 @@
 class DataFile{
-  // An array of Seed objects
-  Seed[] seeds;
   
   String[] rawData;
+  byte[] rawDataBytes;
   int[] rawDataVector;
   int rawDataQuantity;
   String fileNamePath , fileName;
   int fileIndex; // indicate the order in wich the file was added
-
   
-  // For data validation
-  String[] column_titles;
+  SignalDescriptor signalsInFile; // Quantity and order of the signals contained in the file
   
   // Initialize the file
-  DataFile (String file, String filePath) {
+  DataFile (String file, String filePath, SignalDescriptor _signalsInFile) {
     fileIndex = dataFileCount;
+    signalsInFile = _signalsInFile;
     // Get the name of the selected file
     fileNamePath = filePath;
     fileName = file;
     
-    // Load .txt file
-    rawData = loadStrings(fileNamePath);
+    /*  Get if the file has the apropiated file extension */
+    String ext = (fileName.substring( fileName.lastIndexOf(".")+1 , fileName.length() )).toLowerCase();
+    final int bin_ext = 0;
+    final int txt_ext = 1;
+    int ext_decode = -1;;
+    if( ext.equals("txt") == true) ext_decode = txt_ext;
+    if( ext.equals("bin") == true) ext_decode = bin_ext;
     
-    // Data file validation
-    
-    // Determine the number of int16 data point is contained by the rawData string
-    rawDataQuantity = floor( rawData[0].length() / 4 );
-    rawDataVector = new int[rawDataQuantity];
-    Boolean invertHex = false;  // invierte la transformación de string hexa a entero.
-    
-    // Transformo un solo numero para confirmar inversion segun bits ADC
-    String h0= rawData[0].substring(0,2);
-    String h1= rawData[0].substring(2,4);
-    if(unhex( h1 + h0 ) > 4096) invertHex = true;
-    
-    /*  Extract the data vector  */
-    for (int i = 0; i < rawDataQuantity; i++) {
-      int relativePos = i * 4;  // by 4 becouse the ADC are 16bit values ( ej. 0x5522 = 4 characters of the string rawData)
-      String s0= rawData[0].substring(relativePos,relativePos+2);
-      String s1= rawData[0].substring(relativePos+2,relativePos+4);
+    switch( ext_decode) {
+      case bin_ext:
+        /* Process the .bin file that contains raw data in bytes */
+        rawDataBytes = loadBytes(fileNamePath);
+        
+        int fileSize = rawDataBytes.length;
+        int signalVectorSize = rawDataBytes.length/signalsInFile.getSignalsSize();
+        
+        
+        if( signalVectorSize > 18000000) {    // Si mi archivo contiene mas de 18 Mega muestras lo limito (media hora a 100us por muestra)
+          signalVectorSize = 18000000;
+          fileSize = signalVectorSize * signalsInFile.getSignalsSize();
+        }
+        
+        this.rawDataQuantity = signalVectorSize;  // almaceno el numero de muestras del archivo
+        
+        /* Vector de diferentes señales en archivo */
+        int[][] signals = new int[signalsInFile.getSignalQuantity()][signalVectorSize];  // lugar donde guardo las señales ya convertidas, en el orden del signalDescriptor
+        
+        /* Recorro el vector de datos leidos del archivo, en saltos de bytes segun la cantidad de señales */
+        int _index = 0;
+        for(int _pos = 0; _pos < fileSize; _pos += signalsInFile.getSignalsSize()) {
+          int _byteProcessed = 0;
+          /* Procesamiento para cada señale en el tramo */
+          for(int _signal = 0; _signal < signalsInFile.getSignalQuantity(); _signal ++) {
+            /* Procesamiento para forma de guardado big-endian */
+            for( int b = 0; b < signalsInFile.getSignalSize(_signal); b++) {
+              // Guardo valor correspondiente a X _signal en la posicion correspondiente 
+              signals[_signal][_index] = (signals[_signal][_index] << 8) | int(rawDataBytes[_pos + _byteProcessed]);
+              _byteProcessed++;
+            }
+            /* Procesamiento para forma de guardado little-endian */
+            boolean littleEndian = true;
+            if( littleEndian == true) {
+              int _signalSize = signalsInFile.getSignalSize(_signal);
+              byte[] a = new byte[_signalSize];
+              for(int x = 0; x < _signalSize ; x++) {  // guardo todos los bytes por separado
+                a[x] = byte( (signals[_signal][_index]) >> (8*x) );
+              }
+              signals[_signal][_index] = 0;  // reseteo el valor de la muestra
+              for(int x = 0; x < _signalSize ; x++) {  // los almaceno reordenados
+                signals[_signal][_index] = signals[_signal][_index] << 8 | int(a[x]);
+              }
+            }
+          }
+          _index++;
+        }
+        
+        /* En este punto ya tengo todas las señales cargadas en 'signals[][]' */
+        
+        /* Inicializo todas las señales del archivo */
+        for(int _signal = 0; _signal < signalsInFile.getSignalQuantity(); _signal ++) {
+        
+          if ( true == "analog".equals(signalsInFile.getSignalType(_signal)) ) {
+            AnalogSignal newSignal = new AnalogSignal(signals[_signal]);
+          }
+          else {
+            DigitalSignal newSignal = new DigitalSignal(signals[_signal]);
+          }
+        }
       
-      int value;
+      break;
       
-      if( invertHex == true )  // si el valor es más grande que el ADC, tengo que invertir h1, h0
-      {
-        value = unhex( s0 + s1 );
-      }
-      else
-      {
-        value = unhex( s1 + s0 );
-      } //<>//
+      case txt_ext:
+        // Load .txt file
+        rawData = loadStrings(fileNamePath);
+        // Determine the number of int16 data point is contained by the rawData string
+        rawDataQuantity = floor( rawData[0].length() / 4 );
+        rawDataVector = new int[rawDataQuantity];
+        Boolean invertHex = false;  // invierte la transformación de string hexa a entero.
+        
+        // Transformo un solo numero para confirmar inversion segun bits ADC
+        String h0= rawData[0].substring(0,2);
+        String h1= rawData[0].substring(2,4);
+        if(unhex( h1 + h0 ) > 4096) invertHex = true;
+        
+        //  Extract the data vector  
+        for (int i = 0; i < rawDataQuantity; i++) {
+          int relativePos = i * 4;  // by 4 becouse the ADC are 16bit values ( ej. 0x5522 = 4 characters of the string rawData)
+          String s0= rawData[0].substring(relativePos,relativePos+2);
+          String s1= rawData[0].substring(relativePos+2,relativePos+4);
+          
+          int value;
+          
+          if( invertHex == true )  // si el valor es más grande que el ADC, tengo que invertir h1, h0
+          {
+            value = unhex( s0 + s1 );
+          }
+          else
+          {
+            value = unhex( s1 + s0 );
+          }
+          
+          rawDataVector[i] = value;
+        }
+        AnalogSignal newSignal = new AnalogSignal(rawDataVector);
+      break;
       
-      rawDataVector[i] = value;
+      default:
+      javax.swing.JOptionPane.showMessageDialog(null, "File extension decoder missing!", "File Decoder Error", javax.swing.JOptionPane.ERROR_MESSAGE);
     }
-    
     
   }
   
   // Returns the name of the original file loaded to this dataFile object
   String getFileName () {
     return fileName;
-  }
-  
-  
-  void plotData ( GPlot plot) {
-    // Add one layer for every seed saved in file
-    String layerName = "main";//fileName.substring(0,fileName.length()-4)  ; //Conform the plot layer name as 'csvFileName.#'
-    String lq_layerName = "lowQualy";// + layerName;
-    String slq_layerName = "superLowQualy";
-    int nPoints = rawDataQuantity;                       // number of value points in txt file
-    int slq_scale = 64;
-    int lq_scale = 4;
-    
-    GPointsArray points = new GPointsArray(nPoints);  // points of plot
-    GPointsArray lowQualyPoints = new GPointsArray(nPoints/lq_scale);  // points for low qualy layer
-    GPointsArray superLowQualyPoints = new GPointsArray(nPoints/slq_scale);  // points for super low qualy layer
-    
-    for (int i = 0; i < nPoints; i++) {
-      /* Añado el punto a la capa del plot */
-      points.add(i*0.1, rawDataVector[i], "("+ i*0.1 +" , "+ rawDataVector[i] +")");
-      
-      if( i % lq_scale == 0 )  //every lq_scale points save one for the low qualy layer
-      {
-        lowQualyPoints.add(i*0.1, rawDataVector[i]);
-      }
-      if( i % slq_scale == 0 )  //every slq_scale points save one for the super low qualy layer
-      {
-        superLowQualyPoints.add(i*0.1, rawDataVector[i]);
-      }
-    } //<>//
-    
-    // Main Layer
-    plot1.addLayer(layerName, points);     // add points to the main layer
-    plot1.getLayer(layerName).setFontSize(14);
-    // Low Qualy Layer
-    plot1.addLayer(lq_layerName, lowQualyPoints);
-    plot1.getLayer(lq_layerName).setFontSize(14);
-    plot1.getLayer(lq_layerName).setPointSize(5);
-    
-    // Super Low Qualy Layer
-    plot1.addLayer(slq_layerName, superLowQualyPoints);
-    plot1.getLayer(slq_layerName).setFontSize(14);
-    plot1.getLayer(slq_layerName).setPointSize(4);
   }
   
   Boolean getMarkers()
@@ -172,156 +202,12 @@ class DataFile{
     return fail;
   }
   
-  void removeLayers (){
-    // Remove one layer for every seed saved in file
-    for (Seed s : seeds) {
-      s.removeLayer( fileName, fileIndex);
-    }
-  }
-  
   int getFileIndex() {
     return fileIndex;
   }
 
   int getRawDataQuantity() {
     return rawDataQuantity;
-  }
-
-  int getRawDataVectorIn(int position) {
-    return rawDataVector[position];
-  }
-  
-  void setFileIndex( int fi ) {
-    fileIndex = fi;
-  }
-  
-  void exportToFile( int format ){
-    
-    switch (format) {
-      case 0:  /* Export in .h format   */
-          exportToH();
-      break;
-      case 1:  /* Export in .csv format   */
-          exportToCSV();
-      break;
-    }
-    
-  }
-  
-  
-  
-  void exportToCSV() {
-    /*  Init new table where to export  */
-    Table tableExport;
-    tableExport = new Table();
-    
-    /*  Add colums  */
-    tableExport.addColumn("#");
-    tableExport.addColumn("timeStamp");
-    for ( int i=0 ; i < 101 ; i++ ){
-      tableExport.addColumn( str(i) );
-    }
-    
-    timeStampsFilePathLoaded = false;
-    File start = new File(sketchPath("")+"/*.txt");
-    selectInput("Select a .txt file that contains the timeStamps to extract", "setTimeStampsFile", start);
-    
-    while( timeStampsFilePathLoaded == false ){delay(50);}
-    
-    String[] timeStamps = loadStrings(timeStampsFilePath);
-    
-    /*  Add Rows  */
-    int count = 0;
-    for (String t : timeStamps) {
-      // Salteo string vacia
-      if( timeStamps[count].isEmpty() ) {
-        count++;
-        continue;
-      }
-      
-      // Me aseguro de tener puntos suficientes para guardar la semilla
-      if( Integer.valueOf(timeStamps[count]) + 52 > rawDataQuantity )
-        break;
-      /*  Add row containing the data arraund each timestamp  */
-      TableRow newRow = tableExport.addRow();
-      newRow.setInt("#", count);
-      newRow.setInt("timeStamp", Integer.valueOf(timeStamps[count]) );
-      for (int i = 0; i<101; i++ ){
-        newRow.setInt( str(i) , rawDataVector[i + (Integer.valueOf(timeStamps[count])-50) ]);
-      }
-      count++;
-    }
-    
-    /*  Save table  */
-    String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exported.csv";
-    saveTable( tableExport, fileSavedIn );
-    
-    /*  Show success  */
-    javax.swing.JOptionPane.showMessageDialog(null, "File Exported in " + fileSavedIn, "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-  }
-  
-  void exportToH() {
-    
-    String matrixVector[] = {"",""};
-        
-    /*  Add the text of all the seeds data  */
-    int numberOfPointsData = rawDataQuantity;
-    
-    /*  Add the start of the vector  */
-    matrixVector[0] = "#define NUMBER_OF_POINTS " + numberOfPointsData;
-    
-    /*  Start the vector  */
-    matrixVector[1] = "uint16_t adcData[NUMBER_OF_POINTS] = { ";
-    
-    /* Open a progress bar window  */
-    thread("progressBarWindow");
-    
-    /* Creates the threads to make the conformation of string faster */
-    for (int i = 0; i < numberOfThreadsToUse; i++) {
-      threadsInUse[i] = 0;
-    }
-    for (int i = 0; i < numberOfThreadsToUse; i++) {
-      thread("mThreadExport");
-      while (threadsInUse[i] == 0)
-      {
-        delay(10);
-      }
-    }
-    
-    /*  Espero que todos los threads terminen, mientras actualizo la barra de carga */
-    while (progressBarValue < 100)
-    {
-      int auxProgress = 0;
-      for (int i = 0; i < numberOfThreadsToUse; i++) {
-        auxProgress += threadsProgress[i];
-      }
-      progressBarValue = auxProgress / numberOfThreadsToUse;
-      
-      // no hace falta que este procesando esto continuamente
-      try {
-       Thread.sleep(100);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      } 
-      
-    }
-
-    /* Concateno las string de los threads */
-    
-    matrixVector[1] += threadString[0] + threadString[1] + threadString[2] + threadString[3] + threadString[4] + threadString[5] + threadString[6] + threadString[7];
-    
-    /*  Add the end of the vector  */
-    matrixVector[1] = matrixVector[1].substring(0,matrixVector[1].length()-2 ) + "};";
-    
-    /*  Save text file  */
-    String fileSavedIn = fileNamePath.substring(0,fileNamePath.length()-4 ) + "_exported.h"; //<>//
-    saveStrings( fileSavedIn, matrixVector );
-    
-    progressBarValue = 100;  // make sure the progress bar is closed
-    
-    /*  Show success  */
-    javax.swing.JOptionPane.showMessageDialog(null, "File Exported in " + fileSavedIn, "Export File", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-    println("Archivo Exportado");
   }
   
 }

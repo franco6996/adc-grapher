@@ -25,6 +25,14 @@ final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the sa
 public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
+/* Signals in*/
+public final int maxNumberOfAnalogSignals = 3;
+public final int maxNumberOfDigitalSignals = 5;
+public AnalogSignal[] analogSignals = new AnalogSignal[maxNumberOfAnalogSignals];
+public DigitalSignal[] digitalSignals = new DigitalSignal[maxNumberOfDigitalSignals];
+
+GPlot[] digitalPlots = new GPlot[maxNumberOfDigitalSignals];  // Digital Plots
+
 // Predefined Plot Colors= {  R,   G,   B,Yell,Cyan,Mage,}
 int[] predefinedColorR = {  255,   0,   0, 255,   0, 255,};
 int[] predefinedColorG = {    0, 200,   0, 210, 255,   0,};
@@ -37,15 +45,13 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.06";
+final String swVersion = "0.07";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
-  
-  //smooth(4);
 }
 
 void setup() {
@@ -66,12 +72,8 @@ void setup() {
   imgConfig.filter(GRAY);
   imgDelete = loadImage("data/delete.png");
   imgDelete.filter(GRAY);
-  imgExport = loadImage("data/export.png");
-  imgExport.filter(GRAY);
   imgAdd = loadImage("data/add.png");
   imgAdd.filter(GRAY);
-  imgM = loadImage("data/m.png");
-  imgM.filter(GRAY);
   
   // Check for new Updates
   thread("checkUpdates");
@@ -81,13 +83,12 @@ void setup() {
   
   plotMode = 0;
   
-  
-  //noLoop();
   PFont font = createFont("Consolas", 12);
   textFont(font);
   
 
 }
+
 int test = 0;
 public int plotMode = 0;
 void draw() {
@@ -101,43 +102,58 @@ void draw() {
       plot1.beginDraw();
       plot1.drawBackground();
       plot1.drawBox();
-      plot1.drawYAxis();
+      if( analogSignals[0] != null) plot1.drawYAxis();
       plot1.drawXAxis();
       plot1.drawTitle();
-      drawMarkers();
       
       /* Segun zoom aplicado dibujo capa de baja calidad */
       float[] xLim = plot1.getXLim();
-      String layerToDraw;
+      int qualy;
       if(xLim[1] - xLim[0] < 3000)        
       {
-        layerToDraw = "main"; 
+        qualy = 0;   // full Res
       }
       else if (xLim[1] - xLim[0] < 13000)
       {
-        layerToDraw = "lowQualy";
+        qualy = 1;  // low Qualy
+      }
+      else if (xLim[1] - xLim[0] < 100000)
+      {
+        qualy = 2;  // super Low Qualy
       }
       else
       {
-        layerToDraw = "superLowQualy";
+        qualy = 3;  // ultra Low Qualy
       }
       
+      /* Call each analog signal to draw itself*/
+      for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
+        if( analogSignals[signal] != null && analogSignals[signal].isUsed)  analogSignals[signal].draw(qualy);
+      }
       
-      plot1.getLayer(layerToDraw).drawPoints();  
-      plot1.getLayer(layerToDraw).drawLines();
       plot1.drawLabels();
       plot1.endDraw();
+      
+      /* Call each digital signal to draw itself*/
+      for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+        if( digitalSignals[signal] != null && digitalSignals[signal].isUsed) digitalSignals[signal].draw(qualy);
+      }
       
       /* Name of file*/
       textAlign(CENTER);
       fill(80);
       text("File: " + dataFiles[0].getFileName(), width/2, height-10);
       
+      /* Quality used to show */
+      textAlign(RIGHT);
+      fill(150);
+      text("Quality: " + qualy , width-10 , 10);
+      
       /* Icons */
       tint(150, 180);
       image(imgDelete, width-10-20 ,    height-10-16, 24, 24);
-      image(imgExport, width-10-20-30 , height-10-16, 24, 24);
-      image(imgM,      width-10-20-60 , height-10-16, 24, 24);
+      //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
+      //image(imgM,      width-10-20-60 , height-10-16, 24, 24);
     break;
     
     default:  // Default view
@@ -147,37 +163,13 @@ void draw() {
       imageMode(CORNER);
       textAlign(CENTER);
       textSize(14);
-      text("Load a '.txt' file that contains 16bits hexadecimal values", width/2, (height/2)+130);
-      text("with no comma or separation", width/2, (height/2)+148);
+      text("Load a '.txt' or '.bin' file that contains ", width/2, (height/2)+130);
+      text("a number of signals recorded represented by 'signals.properties'", width/2, (height/2)+148);
     break;
   }
   
   // Show information text arround the window
   showInfoText();
-}
-
-void drawMarkers()
-{
-  if ( drawPlotMarkers == true)
-  {
-    float yMarkerPos1 =  plot1.getYLim()[0]+0.7*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos2 =  plot1.getYLim()[0]+0.85*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos3 =  plot1.getYLim()[0]+(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    float yMarkerPos4 =  plot1.getYLim()[0]+1.15*(plot1.getYLim()[1]-plot1.getYLim()[0])/2;
-    for(int i=0; i< numberOfPlotMarkers; i++)
-    {
-      plot1.drawVerticalLine(plotMarkers[i]*0.1, 180, 2);  // dibujo la linea de marcador 
-      if(plotMarkersText[i] == "RESET")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos2, LEFT, CENTER); // le pongo el texto almacenado 
-      else if(plotMarkersText[i] == "NO PULSO")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos1, LEFT, CENTER); // le pongo el texto almacenado
-      else if(plotMarkersText[i] == "FLANCO ASCENDENTE")
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos3, LEFT, CENTER); // le pongo el texto almacenado
-      else
-        plot1.drawAnnotation(plotMarkersText[i], plotMarkers[i]*0.1+0.01,yMarkerPos4, LEFT, CENTER); // le pongo el texto almacenado
-    }
-    
-  }
 }
 
 int helpNumber = 0;
@@ -190,7 +182,7 @@ void showInfoText() {
       if ( helpNumber > 0 )  helpNumber = 0;
     }
     if ( plotMode == 1) {
-      if ( helpNumber > 3 )  helpNumber = 0;
+      if ( helpNumber > 1 )  helpNumber = 0;
     }
     time = millis();
   }
@@ -209,12 +201,6 @@ void showInfoText() {
         text("Press 'Delete' to close the open file", 10, height-10);
       break;
       case 1:
-        text("Press 'E' to export the file", 10, height-10);
-      break;
-      case 2:
-        text("Press 'M' to show markers of the pulses", 10, height-10);
-      break;
-      case 3:
         text("Press the Arrow Keys to expand or contract the graph", 10, height-10);
       break;
     }
@@ -239,28 +225,34 @@ void loadingText() {
 }
 
 
-void plot1SetConfig() {
+void plotSetConfig() {
+  /* Plot 1: Analog Signals */
+  
   // Create a new plot and set its position on the screen
   plot1 = new GPlot(this);
   plot1.setPos(plotFromX, plotFromY);
   plot1.setDim( plotToX*2-plotFromX+120, plotToY-plotFromY);
   
   // Set the plot title and the axis labels
-  plot1.setTitleText("Timeline Representation of " + nfc(dataFiles[0].getRawDataQuantity()) + " Data Points");
+  plot1.setTitleText("Timeline Representation of Signals");
   plot1.getXAxis().setAxisLabelText("Time [ms]");
   plot1.getYAxis().setAxisLabelText("ADC raw value");
   
   plot1.getYAxis().setLim(new float[] { 0, 4100});
   plot1.getYAxis().setNTicks( 10);
   
-  plot1.getXAxis().setNTicks( 10);
-  plot1.setXLim(new float[] { 0, dataFiles[dataFileCount].getRawDataQuantity() /10 });
-  plot1.setFixedXLim(true);
+  plot1.getXAxis().setNTicks( 15);
   
   // Set plot1 configs
-  plot1.activatePointLabels();
+  plot1.activatePointLabels(RIGHT);
   plot1.activateZooming(1.2, CENTER, CENTER);
   plot1.activatePanning();
+  
+  /* Init all the digital plots with empty data */
+  for(int i = 0; i < maxNumberOfDigitalSignals; i++) {
+    digitalPlots[i] = new GPlot(this);
+  }
+  
 }
 
 void loadData(File selection) {
@@ -270,15 +262,33 @@ void loadData(File selection) {
     return;
   }
   String fileName = selection.getName(), fileNamePath = selection.getAbsolutePath();
+  
+  /*  Get if the file has the apropiated file extension */
+  String ext = (fileName.substring( fileName.lastIndexOf(".")+1, fileName.length() )).toLowerCase();
+  
+  if(ext.equals("bin")==false && ext.equals("txt")==false) {
+    javax.swing.JOptionPane.showMessageDialog(null, "Incompatible file extension.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
+    return;
+  }
+  
   loadingText();
   
+  /* Cargar descriptor de señales en archivo*/
+  SignalDescriptor signalsInFile = getSignalPropierties( fileNamePath);
+  
+  /* Start the plot*/
+  if (dataFileCount == 0 ) plotSetConfig();
+  
   // Initialize the new file
-  dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath );
+  dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
   
-  if (dataFileCount == 0 ) plot1SetConfig();
-  
-  // Add Layers of the new file selected
-  dataFiles[dataFileCount].plotData( plot1 );
+  /* Auto zoom for the first file loaded only */
+  if (dataFileCount == 0 ) {
+    int b = dataFiles[0].getRawDataQuantity()/10;
+    float[] a = {0, (float)b};
+    //plot1.getXAxis().setLim(a);
+    plot1.setXLim(a);
+  } 
   
   // Prepare for the next file
   dataFileCount++;
@@ -287,43 +297,17 @@ void loadData(File selection) {
   
   loop();
   
-  //plot1.setXLim(0,20);
-  
   firstTimeStarted = false;
 }
 
-
-void exportFile (int numberExport) {
-  if ( dataFileCount == 0 ) return;
-  
-  /*  Ask what type of file to export  */
-  String[] options = {".h",".csv"};
-  int format = javax.swing.JOptionPane.showOptionDialog(null,"Select the format to export the file:\n-Vector in a C code format (.h)\n-SeedAnalizer format (.csv)", "Export File",
-  javax.swing.JOptionPane.DEFAULT_OPTION, javax.swing.JOptionPane.INFORMATION_MESSAGE,
-  null, options, options[0]);
-  
-  
-  if ( format != -1 ) {
-    /*  Export indicated File  */
-    dataFiles[ numberExport ].exportToFile( format );
+void addFile() {
+  if ( dataFileCount >= dataFilesMax ) {
+    javax.swing.JOptionPane.showMessageDialog(null, "Max number of files reached.", "File Input Error", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+  } else {
+    noLoop();
+    File start1 = new File(sketchPath("")+"/*");
+    selectInput("Select a .txt file to representate", "loadData", start1);
   }
-  else {
-    /*  Show error  */
-    javax.swing.JOptionPane.showMessageDialog(null, "Error exporting the file!", "Export File", javax.swing.JOptionPane.ERROR_MESSAGE);
-  }
-  
-}
-
-public String timeStampsFilePath;
-public boolean timeStampsFilePathLoaded;
-public void setTimeStampsFile( File selection ) {
-    if (selection == null) {
-      javax.swing.JOptionPane.showMessageDialog(null, "No file selected.", "File Input Error", javax.swing.JOptionPane.WARNING_MESSAGE);
-      loop();
-      return;
-    }
-    timeStampsFilePath = selection.getAbsolutePath();
-    timeStampsFilePathLoaded = true;
 }
 
 void deleteFile () {
@@ -333,6 +317,16 @@ void deleteFile () {
  
  dataFiles[0] = null;
  plot1 = null;
+ 
+ /* Delete each analog signal */
+  for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
+    if( analogSignals[signal] != null )  analogSignals[signal] = null;
+  }
+      
+  /* Delete each digital signal */
+  for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+    if( digitalSignals[signal] != null )  digitalSignals[signal] = null;
+  }
  
  plotMode = 0;
  dataFileCount = 0;
@@ -349,60 +343,52 @@ void mouseClicked() {
     
     if (mouseX >=  width-10-20 && mouseX <=  width && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       deleteFile();
-      
-    if (mouseX >=  width-10-20-30 && mouseX <=  width-10-20-6 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
-      exportFile(0);
-      
-    if (mouseX >=  width-10-20-60 && mouseX <=  width-10-20-36 && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
-    {
-      if(drawPlotMarkers==false)
-      {
-        Boolean rtn_error = dataFiles[0].getMarkers();
-        if( rtn_error == false) drawPlotMarkers = true;
-      }
-      else
-      {
-        drawPlotMarkers = false;
-      }
-    }
   }
   
-}
-
-void addFile() {
-  if ( dataFileCount >= dataFilesMax ) {
-    javax.swing.JOptionPane.showMessageDialog(null, "Max number of files reached.", "File Input Error", javax.swing.JOptionPane.INFORMATION_MESSAGE);
-  } else {
-    noLoop();
-    File start1 = new File(sketchPath("")+"/*.txt");
-    selectInput("Select a .txt file to representate", "loadData", start1);
-  }
 }
 
 // Pressing 'n' will bring the window to select a new file to add to the plot
 void keyReleased() {
   switch (key) {
+
     case 'N':
       if (plotMode != 0) return;
       addFile();
     break;
+
     case DELETE:
       deleteFile();
     break;
-    case 'E':
-      exportFile(0);
+
+    case 'C':  // digital signal pulse counter
+    String counterOutput = new String();
+    
+    /* Call each digital signal to return counter value */
+    for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
+      if( digitalSignals[signal] != null && digitalSignals[signal].isUsed) {
+        
+        counterOutput +=  "\nDigital CH" + str(signal+1) + ": " + digitalSignals[signal].getPulseCount();
+        
+      }
+    }
+    javax.swing.JOptionPane.showMessageDialog(null, counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
     break;
-    case 'M':
-      if(drawPlotMarkers==false)
-      {
-        Boolean rtn_error = dataFiles[0].getMarkers();
-        if( rtn_error == false) drawPlotMarkers = true;
-      }
-      else
-      {
-        drawPlotMarkers = false;
-      }
-      
+
+    // Move digital signals
+    case '1':
+      if( digitalSignals[0] != null && digitalSignals[0].isUsed) digitalSignals[0].applyPlotOffset();
+    break;
+    case '2':
+      if( digitalSignals[1] != null && digitalSignals[1].isUsed) digitalSignals[1].applyPlotOffset();
+    break;
+    case '3':
+      if( digitalSignals[2] != null && digitalSignals[2].isUsed) digitalSignals[2].applyPlotOffset();
+    break;
+    case '4':
+      if( digitalSignals[3] != null && digitalSignals[3].isUsed) digitalSignals[3].applyPlotOffset();
+    break;
+    case '5':
+      if( digitalSignals[4] != null && digitalSignals[4].isUsed) digitalSignals[4].applyPlotOffset();
     break;
   }
 }
