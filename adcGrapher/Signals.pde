@@ -176,7 +176,7 @@ class AnalogSignal {
     slq_layerName = "superLowQualy" + layerName;
     ulq_layerName = "ultraLowQualy" + layerName;
     
-    GPointsArray points = new GPointsArray(dataVector.length);  // points of plot //<>//
+    GPointsArray points = new GPointsArray(dataVector.length);  // points of plot
     GPointsArray lowQualyPoints = new GPointsArray(dataVector.length/lq_scale);  // points for low qualy layer
     GPointsArray superLowQualyPoints = new GPointsArray(dataVector.length/slq_scale);  // points for super low qualy layer
     GPointsArray ultraLowQualyPoints = new GPointsArray(dataVector.length/ulq_scale);  // points for super low qualy layer
@@ -237,22 +237,22 @@ class AnalogSignal {
     int indexA = int(xLim[0]) * 10;
     int indexB = int(xLim[1] * 10);
     
-    switch(quality) {
+    switch(quality) { //<>//
       case 0:    // ful Res
         plot1.getLayer(layerName).drawPoints(indexA, indexB);
-        plot1.getLayer(layerName).drawLines( true, indexA, indexB);
+        plot1.getLayer(layerName).drawLines( true, indexA, int(indexB) );
         break;
       case 1:    // low Qualy
         plot1.getLayer(lq_layerName).drawPoints(indexA/lq_scale, indexB/lq_scale); 
-        plot1.getLayer(lq_layerName).drawLines( false, indexA/lq_scale, indexB/lq_scale);
+        plot1.getLayer(lq_layerName).drawLines( false, indexA/lq_scale, int(indexB/lq_scale) );
         break;
       case 2:    // super low Qualy
         plot1.getLayer(slq_layerName).drawPoints(indexA/slq_scale, indexB/slq_scale);  
-        plot1.getLayer(slq_layerName).drawLines( false, indexA/slq_scale, indexB/slq_scale);
+        plot1.getLayer(slq_layerName).drawLines( false, indexA/slq_scale, int(indexB/slq_scale) );
         break; 
       case 3:    // ultra low Qualy
         plot1.getLayer(ulq_layerName).drawPoints(indexA/ulq_scale, indexB/ulq_scale);
-        plot1.getLayer(ulq_layerName).drawLines( false, indexA/ulq_scale, indexB/ulq_scale);
+        plot1.getLayer(ulq_layerName).drawLines( false, indexA/ulq_scale, int(indexB/ulq_scale) );
         break; 
     }
      

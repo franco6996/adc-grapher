@@ -1071,7 +1071,7 @@ public class GLayer implements PConstants {
     
     indexA = indexA < 0 ? 0 : indexA;
     indexB = indexB <=indexA ? (plotPoints.getNPoints() - 1) : indexB;
-    indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB+1;
+    indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB;
 
     for (int i = indexA; i < indexB; i++) {
       if (inside.get(i) && inside.get(i + 1)) {
