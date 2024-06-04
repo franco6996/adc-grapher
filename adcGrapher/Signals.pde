@@ -48,7 +48,7 @@ SignalDescriptor getSignalPropierties (String currentPath) {
                     javax.swing.JOptionPane.ERROR_MESSAGE | javax.swing.JOptionPane.OK_OPTION);
     }
     
-    signalDescriptor.setSignal( x-1, signalType, int(signalSize) );
+    signalDescriptor.setSignal( x-1, signalType, int(signalSize), signalName );
   }
   
   return signalDescriptor;
@@ -94,19 +94,22 @@ class SignalDescriptor{
   int[][] signalDescriptorVector;    /* [0]Signal Tipe: Analog = 0, Digital = 1 -  [1]Signal Bytes  */
   final int signalType = 0, signalSize = 1;
   int numberOfSignals;
+  String[] signalName;
   
   SignalDescriptor(int _numberOfSignals) {
     numberOfSignals = _numberOfSignals;
     signalDescriptorVector = new int[_numberOfSignals][2];
+    signalName = new String[_numberOfSignals];
   }
   
-  void setSignal(int _signalIndex, String _signalType, int _numberOfBytes) {
+  void setSignal(int _signalIndex, String _signalType, int _numberOfBytes, String _signalName) {
     if (_signalType.equals("digital") == true)
       signalDescriptorVector[_signalIndex][signalType] = 0;
     else
       signalDescriptorVector[_signalIndex][signalType] = 1;
     
     signalDescriptorVector[_signalIndex][signalSize] = _numberOfBytes;
+    this.signalName[_signalIndex] = _signalName;
   }
   
   String getSignalType (int _signalIndex) {
@@ -118,6 +121,10 @@ class SignalDescriptor{
   
   int getSignalSize (int _signalIndex) {
     return signalDescriptorVector[_signalIndex][signalSize];
+  }
+  
+  String getSignalName (int _signalIndex) {
+     return signalName[_signalIndex];
   }
   
   int getSignalQuantity () {
@@ -280,7 +287,9 @@ class DigitalSignal {
   String lq_layerName;
   String slq_layerName;
   
-  DigitalSignal( int[] dataVector){
+  String signalName;
+  
+  DigitalSignal( int[] dataVector, String _signalName){
     isUsed = true;
     
     /* Reasigno este objeto al vector global para luego acceder globalmente */
@@ -295,6 +304,8 @@ class DigitalSignal {
         return;
       }
     }
+    
+    this.signalName = _signalName;
     
     /* Guardo el vector de datos de la señal dentro de este objeto */
     this.dataVector = dataVector;
@@ -340,7 +351,19 @@ class DigitalSignal {
     digitalPlots[objectNumber].setDim( plotToX*2-plotFromX+120, plotHigh);
     
     // Set the plot title and the axis labels
-    digitalPlots[objectNumber].getRightAxis().setAxisLabelText("Digital CH" + str(objectNumber+1));
+    String axisLabel;
+    if (this.signalName.length() < 2)
+    {
+      axisLabel = "Digital CH" + str(objectNumber+1);
+    }
+    else if(this.signalName.length() > 12) {
+      axisLabel = this.signalName.substring(0,12) + "..";
+    }
+    else {
+      axisLabel = this.signalName;
+    }
+    //digitalPlots[objectNumber].getRightAxis().getAxisLabel().setFontName("Consolas");
+    digitalPlots[objectNumber].getRightAxis().setAxisLabelText( axisLabel);
     digitalPlots[objectNumber].getRightAxis().getAxisLabel().setOffset(10);
     
     // Set plot configs

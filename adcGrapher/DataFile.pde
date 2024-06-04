@@ -82,7 +82,7 @@ class DataFile{
             AnalogSignal newSignal = new AnalogSignal(signals[_signal]);
           }
           else {
-            DigitalSignal newSignal = new DigitalSignal(signals[_signal]);
+            DigitalSignal newSignal = new DigitalSignal(signals[_signal], signalsInFile.getSignalName(_signal) );
           }
         }
       
