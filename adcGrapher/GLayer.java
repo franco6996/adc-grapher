@@ -837,6 +837,8 @@ public class GLayer implements PConstants {
     indexA = indexA < 0 ? 0 : indexA;
     indexB = indexB < indexA ? nPoints : indexB;
     indexB = indexB >= plotPoints.getNPoints() ? nPoints : indexB+1;
+    
+    updateInsideList();
 
     parent.pushStyle();
     parent.ellipseMode(CENTER);
@@ -1071,8 +1073,8 @@ public class GLayer implements PConstants {
     
     indexA = indexA < 0 ? 0 : indexA;
     indexB = indexB <=indexA ? (plotPoints.getNPoints() - 1) : indexB;
-    indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB+1;
-
+    indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB;
+    
     for (int i = indexA; i < indexB; i++) {
       if (inside.get(i) && inside.get(i + 1)) {
         parent.line(plotPoints.getX(i), plotPoints.getY(i), plotPoints.getX(i + 1), plotPoints.getY(i + 1));

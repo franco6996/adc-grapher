@@ -82,7 +82,7 @@ class DataFile{
             AnalogSignal newSignal = new AnalogSignal(signals[_signal]);
           }
           else {
-            DigitalSignal newSignal = new DigitalSignal(signals[_signal]);
+            DigitalSignal newSignal = new DigitalSignal(signals[_signal], signalsInFile.getSignalName(_signal) );
           }
         }
       
@@ -92,7 +92,7 @@ class DataFile{
         // Load .txt file
         rawData = loadStrings(fileNamePath);
         // Determine the number of int16 data point is contained by the rawData string
-        rawDataQuantity = floor( rawData[0].length() / 4 );
+        this.rawDataQuantity = floor( rawData[0].length() / 4 );
         rawDataVector = new int[rawDataQuantity];
         Boolean invertHex = false;  // invierte la transformación de string hexa a entero.
         

@@ -21,7 +21,7 @@ public boolean drawPlotMarkers = false;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
-final int dataFilesMax = 1;  // This means 4 as max files to be loaded at the same time
+final int dataFilesMax = 2;  // This means 4 as max files to be loaded at the same time
 public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
@@ -45,7 +45,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.07";
+final String swVersion = "0.08";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
@@ -282,13 +282,25 @@ void loadData(File selection) {
   // Initialize the new file
   dataFiles[dataFileCount] = new DataFile( fileName, fileNamePath, signalsInFile);
   
-  /* Auto zoom for the first file loaded only */
-  if (dataFileCount == 0 ) {
-    int b = dataFiles[0].getRawDataQuantity()/10;
-    float[] a = {0, (float)b};
-    //plot1.getXAxis().setLim(a);
-    plot1.setXLim(a);
-  } 
+  /* Auto zoom X axis */
+  for( int x = 0; x < dataFileCount+1; x++)
+  {
+    int layerXAxisSpan = dataFiles[x].getRawDataQuantity()/10;
+    float[] newXLimit = {0, (float)layerXAxisSpan};
+    float[] xLim = plot1.getXLim();
+    if( xLim[1] < newXLimit[1] || dataFileCount == 0)
+      plot1.setXLim(newXLimit);
+  }
+  
+  /* Always zoom in Y axis to the max */
+  float[] yLim = plot1.getYLim();
+  //yLim[0] = yLim[0] < 0 ? 0 : yLim[0];
+  //yLim[1] = yLim[1] > 4096 ? 4096 : yLim[1];
+  /* Force y Limit to max*/
+  yLim[0] = 0;
+  yLim[1] = 4096;
+  plot1.setYLim(yLim);
+   
   
   // Prepare for the next file
   dataFileCount++;
@@ -315,7 +327,14 @@ void deleteFile () {
  
  noLoop();
  
- dataFiles[0] = null;
+ for(int i = 0; i < dataFilesMax; i++)
+ {
+   if( dataFiles[i] == null)
+     break;
+   else
+    dataFiles[i] = null;
+ }
+ 
  plot1 = null;
  
  /* Delete each analog signal */
@@ -352,7 +371,7 @@ void keyReleased() {
   switch (key) {
 
     case 'N':
-      if (plotMode != 0) return;
+      //if (plotMode != 0) return;
       addFile();
     break;
 
