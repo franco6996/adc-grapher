@@ -21,7 +21,7 @@ public boolean drawPlotMarkers = false;
 
 // An Array of dataFiles (.csv) to be loaded with seeds data each one
 DataFile[] dataFiles;
-final int dataFilesMax = 2;  // This means 4 as max files to be loaded at the same time
+final int dataFilesMax = 4;  // This means 4 as max files to be loaded at the same time
 public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
@@ -60,6 +60,8 @@ void setup() {
   background(255);
   randomSeed(99);
   
+  //redirectConsole();
+  
   // Set title bar and icon for Windows app
   PImage titlebaricon = loadImage("data/icon.png"); 
   if (titlebaricon != null){
@@ -91,6 +93,10 @@ void setup() {
 
 int test = 0;
 public int plotMode = 0;
+
+long timer1 = 0;
+boolean focus = true;
+
 void draw() {
   
   background(255);  // clear the previus draw
@@ -154,6 +160,8 @@ void draw() {
       image(imgDelete, width-10-20 ,    height-10-16, 24, 24);
       //image(imgExport, width-10-20-30 , height-10-16, 24, 24);
       //image(imgM,      width-10-20-60 , height-10-16, 24, 24);
+      
+      
     break;
     
     default:  // Default view
@@ -362,6 +370,13 @@ void mouseClicked() {
     
     if (mouseX >=  width-10-20 && mouseX <=  width && mouseY >=  height-10-16 && mouseY <=  height && plotMode == 1)
       deleteFile();
+    
+    if (mouseX >=  plotFromX+37 && mouseX <=  plotFromX+37+28 && mouseY >=  plotFromY+40 && mouseY <=  plotFromY+40+680 && plotMode == 1)
+    {
+      plot1.setYLim(new float[] { 0, 4100});
+      plot1.getYAxis().setNTicks( 10);
+    }
+      
   }
   
 }
@@ -373,6 +388,11 @@ void keyReleased() {
     case 'N':
       //if (plotMode != 0) return;
       addFile();
+    break;
+    
+    case 'P':
+      // print screen
+      save("screenshot.jpg");
     break;
 
     case DELETE:
@@ -390,7 +410,26 @@ void keyReleased() {
         
       }
     }
-    javax.swing.JOptionPane.showMessageDialog(null, counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+    
+    final class ShowInfoThread extends Thread{
+      boolean inUse;
+      String counterOutput;
+      ShowInfoThread(String string) {
+        this.counterOutput = string;
+        this.inUse = true;
+      }
+      
+      boolean inUse() {return inUse;}
+      
+      public void run(){
+        javax.swing.JOptionPane.showMessageDialog(null, this.counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        this.inUse = false;
+      }
+    }
+    ShowInfoThread info;
+    info = new ShowInfoThread(counterOutput);
+    info.start();
+    //javax.swing.JOptionPane.showMessageDialog(null, counterOutput, "Digital Pulse Counter", javax.swing.JOptionPane.INFORMATION_MESSAGE);
     break;
 
     // Move digital signals
@@ -467,4 +506,16 @@ public static void main(String[] args) {
 public void exit() {
     super.exit();
     System.exit(0);
+}
+
+void redirectConsole() {
+  //String str_name = str(month())+"_"+str(day())+"_"+str(hour())+"_"+str(minute())+"_";
+  // println(sketchPath() + "/data/"+str_name+"console.err");
+  try {
+    System.setErr(new PrintStream(new FileOutputStream(new File(sketchPath() + "/console.err"))));
+    System.setOut(new PrintStream(new FileOutputStream(new File(sketchPath() + "/console.out"))));
+  } 
+  catch (Exception e) {    
+    JOptionPane.showMessageDialog(null, e.getMessage(), "Failure", JOptionPane.ERROR_MESSAGE);
+  }
 }
