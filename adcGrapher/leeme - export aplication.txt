@@ -1,0 +1,3 @@
+Cuando se requiera exportar la aplicación, desde procesing vamos a archivo y ponemos exportar. El problema es que las modificaciones echa a la libreria grafica que están dentro de los archivos GPlot.java y GLayer.java no se pasan a dicha aplicación exportada.
+
+Lo que tenemos que hacer es buscar estos dos archivos compilados (en formato .class) dentro de %temp%/procesing ya que el programa cuando ejecutamos internamente ya las compila. De acá las sacamos y debemos insertarla dentro del .jar en la carpeta que se exportó reemplazando las originales. De esta manera dejaremos de tener errores de que busca funciones que no existen cuando se ejecuta la aplicación standalone exportada.

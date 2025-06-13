@@ -45,7 +45,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.08";
+final String swVersion = "0.09";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
@@ -60,7 +60,7 @@ void setup() {
   background(255);
   randomSeed(99);
   
-  //redirectConsole();
+  redirectConsole();
   
   // Set title bar and icon for Windows app
   PImage titlebaricon = loadImage("data/icon.png"); 
