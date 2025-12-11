@@ -154,7 +154,7 @@ class AnalogSignal {
   String ulq_layerName;
   
   /* Divisor de resolución de capas */
-  int lq_scale = 8;
+  int lq_scale = 4;
   int slq_scale = 128;
   int ulq_scale = 1024;
   

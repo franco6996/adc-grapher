@@ -52,6 +52,7 @@ public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
+  noSmooth();
 }
 
 void setup() {
@@ -115,7 +116,7 @@ void draw() {
       /* Segun zoom aplicado dibujo capa de baja calidad */
       float[] xLim = plot1.getXLim();
       int qualy;
-      if(xLim[1] - xLim[0] < 3000)        
+      if(xLim[1] - xLim[0] < 1000)        
       {
         qualy = 0;   // full Res
       }
@@ -269,6 +270,7 @@ void plotSetConfig() {
   }
   
   plot1.setFastDrawEnabled(true);
+  plot1.enableVBO();                          // Activar GPU
   
 }
 
