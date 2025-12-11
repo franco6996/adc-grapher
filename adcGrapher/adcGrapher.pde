@@ -96,11 +96,11 @@ public int plotMode = 0;
 
 long timer1 = 0;
 boolean focus = true;
-
+float drawTimeMs = 0;
 void draw() {
   
   background(255);  // clear the previus draw
-  
+  long t0 = System.nanoTime();  // for profile
   // Draw the Plots
   switch (plotMode) {
     
@@ -182,6 +182,8 @@ void draw() {
   }
   
   // Show information text arround the window
+  long t1 = System.nanoTime();
+  drawTimeMs = (t1 - t0) / 1e6;   // convertir a ms con decimales
   showInfoText();
 }
 
@@ -223,7 +225,7 @@ void showInfoText() {
   textAlign(LEFT);
   fill(150);
   if ( debug )
-    text("FPS: " + nf(frameRate, 0, 2) , 10 , 10);
+    text("FPS: " + nf(frameRate, 0, 2) + " (" + nf(drawTimeMs, 1, 3) + "ms)" , 10 , 10);
 }
 
 void loadingText() {
@@ -265,6 +267,8 @@ void plotSetConfig() {
   for(int i = 0; i < maxNumberOfDigitalSignals; i++) {
     digitalPlots[i] = new GPlot(this);
   }
+  
+  plot1.setFastDrawEnabled(true);
   
 }
 

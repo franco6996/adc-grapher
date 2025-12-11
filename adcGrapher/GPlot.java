@@ -1096,6 +1096,17 @@ public class GPlot implements PConstants {
 	}
 
 	/**
+	 * Enable or disable fast drawing (PShape cache) for all layers.
+	 * Use this when rendering large datasets that are mostly static.
+	 */
+	public void setFastDrawEnabled(boolean enabled) {
+		mainLayer.setFastDrawEnabled(enabled);
+		for (int i = 0; i < layerList.size(); i++) {
+			layerList.get(i).setFastDrawEnabled(enabled);
+		}
+	}
+
+	/**
 	 * Draws a point in the plot
 	 * 
 	 * @param point the point to draw
