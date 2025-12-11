@@ -26,7 +26,7 @@ public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
 /* Signals in*/
-public final int maxNumberOfAnalogSignals = 3;
+public final int maxNumberOfAnalogSignals = 4;
 public final int maxNumberOfDigitalSignals = 5;
 public AnalogSignal[] analogSignals = new AnalogSignal[maxNumberOfAnalogSignals];
 public DigitalSignal[] digitalSignals = new DigitalSignal[maxNumberOfDigitalSignals];
@@ -148,7 +148,12 @@ void draw() {
       /* Name of file*/
       textAlign(CENTER);
       fill(80);
-      text("File: " + dataFiles[0].getFileName(), width/2, height-10);
+      String files = "File: ";
+      for (int i = 0; i < dataFileCount-1 ; i++) {
+        files += dataFiles[i].getFileName() + ", ";
+      }
+      files += dataFiles[dataFileCount-1].getFileName();
+      text(files, width/2, height-10);
       
       /* Quality used to show */
       textAlign(RIGHT);
@@ -343,17 +348,22 @@ void deleteFile () {
     dataFiles[i] = null;
  }
  
- plot1 = null;
- 
  /* Delete each analog signal */
   for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
-    if( analogSignals[signal] != null )  analogSignals[signal] = null;
+    if( analogSignals[signal] != null ) {
+      analogSignals[signal].dispose(); //<>//
+      analogSignals[signal] = null;
+    }
   }
       
   /* Delete each digital signal */
   for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
     if( digitalSignals[signal] != null )  digitalSignals[signal] = null;
   }
+  
+  plot1 = null;
+  
+  System.gc();
  
  plotMode = 0;
  dataFileCount = 0;

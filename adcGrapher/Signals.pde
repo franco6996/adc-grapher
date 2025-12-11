@@ -154,9 +154,9 @@ class AnalogSignal {
   String ulq_layerName;
   
   /* Divisor de resolución de capas */
-  int lq_scale = 4;
-  int slq_scale = 64;
-  int ulq_scale = 512;
+  int lq_scale = 8;
+  int slq_scale = 128;
+  int ulq_scale = 1024;
   
   AnalogSignal( int[] dataVector){
     isUsed = true;
@@ -209,29 +209,46 @@ class AnalogSignal {
     
     /* Add the layers to the plot */
     
+    // Get the color from the object number
+    color c = color(
+      255 * (bitTest(objectNumber+1, 0) ? 1 : 0),
+      255 * (bitTest(objectNumber+1, 1) ? 1 : 0),
+      255 * (bitTest(objectNumber+1, 2) ? 1 : 0)
+    );
+    
+    //c = color(255,0,0);
+    
     // Main Layer
     plot1.addLayer(layerName, points);
-    plot1.getLayer(layerName).setPointColor(color(255,0,0));
+    plot1.getLayer(layerName).setPointColor(c);
     plot1.getLayer(layerName).setFontSize(14);
     
     // Low Qualy Layer
     plot1.addLayer(lq_layerName, lowQualyPoints);
     plot1.getLayer(lq_layerName).setFontSize(14);
-    plot1.getLayer(lq_layerName).setPointColor(color(255,0,0));
+    plot1.getLayer(lq_layerName).setPointColor(c);
     plot1.getLayer(lq_layerName).setPointSize(5);
+    plot1.getLayer(lq_layerName).setLineColor(c);
     
     // Super Low Qualy Layer
     plot1.addLayer(slq_layerName, superLowQualyPoints);
     plot1.getLayer(slq_layerName).setFontSize(14);
-    plot1.getLayer(slq_layerName).setPointColor(color(255,0,0));
+    plot1.getLayer(slq_layerName).setPointColor(c);
     plot1.getLayer(slq_layerName).setPointSize(4);
+    plot1.getLayer(slq_layerName).setLineColor(c);
     
     // Ultra Low Qualy Layer
     plot1.addLayer(ulq_layerName, ultraLowQualyPoints);
     plot1.getLayer(ulq_layerName).setFontSize(14);
-    plot1.getLayer(ulq_layerName).setPointColor(color(255,0,0));
+    plot1.getLayer(ulq_layerName).setPointColor(c);
     plot1.getLayer(ulq_layerName).setPointSize(3);
+    plot1.getLayer(ulq_layerName).setLineColor(c);
     
+  }
+  
+   // Devuelve true si el bit 'pos' está en 1
+  private boolean bitTest(int value, int pos) {
+    return (value & (1 << pos)) != 0;
   }
   
   /* Draws this signal to the plot */
@@ -250,19 +267,29 @@ class AnalogSignal {
         plot1.getLayer(layerName).drawLines( true, indexA, int(indexB) );
         break;
       case 1:    // low Qualy
-        plot1.getLayer(lq_layerName).drawPoints(indexA/lq_scale, indexB/lq_scale); 
+        //plot1.getLayer(lq_layerName).drawPoints(indexA/lq_scale, indexB/lq_scale); 
         plot1.getLayer(lq_layerName).drawLines( false, indexA/lq_scale, int(indexB/lq_scale) );
         break;
       case 2:    // super low Qualy
-        plot1.getLayer(slq_layerName).drawPoints(indexA/slq_scale, indexB/slq_scale);  
+        //plot1.getLayer(slq_layerName).drawPoints(indexA/slq_scale, indexB/slq_scale);  
         plot1.getLayer(slq_layerName).drawLines( false, indexA/slq_scale, int(indexB/slq_scale) );
         break; 
       case 3:    // ultra low Qualy
-        plot1.getLayer(ulq_layerName).drawPoints(indexA/ulq_scale, indexB/ulq_scale);
+        //plot1.getLayer(ulq_layerName).drawPoints(indexA/ulq_scale, indexB/ulq_scale);
         plot1.getLayer(ulq_layerName).drawLines( false, indexA/ulq_scale, int(indexB/ulq_scale) );
         break; 
     }
      
+  }
+
+  void dispose() {
+    if (plot1 != null) {
+      plot1.removeLayer(this.layerName);
+      plot1.removeLayer(this.lq_layerName);
+      plot1.removeLayer(this.slq_layerName);
+      plot1.removeLayer(this.ulq_layerName);
+    }
+    dataVector = null;
   }
   
   int getSignalLength() {
