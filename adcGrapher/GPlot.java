@@ -1096,6 +1096,41 @@ public class GPlot implements PConstants {
 	}
 
 	/**
+	 * Enable or disable fast drawing (PShape cache) for all layers.
+	 * Use this when rendering large datasets that are mostly static.
+	 */
+	public void setFastDrawEnabled(boolean enabled) {
+		mainLayer.setFastDrawEnabled(enabled);
+		for (int i = 0; i < layerList.size(); i++) {
+			layerList.get(i).setFastDrawEnabled(enabled);
+		}
+	}
+
+	/**
+	 * Enable VBO (GPU) rendering for all layers. 
+	 * Dramatically improves performance for pan/zoom with millions of points.
+	 * Call this once after loading large datasets, then enable when rendering.
+	 */
+	public void enableVBO() {
+		mainLayer.initVBO();
+		for (int i = 0; i < layerList.size(); i++) {
+			layerList.get(i).initVBO();
+		}
+	}
+
+	/**
+	 * Set the viewport change threshold for lazy inside list updates.
+	 * Values closer to 0 recalculate more often (more accurate).
+	 * Values closer to 1 cache longer (faster but less responsive). Default 0.02.
+	 */
+	public void setInsideListChangeThreshold(float threshold) {
+		mainLayer.setInsideListChangeThreshold(threshold);
+		for (int i = 0; i < layerList.size(); i++) {
+			layerList.get(i).setInsideListChangeThreshold(threshold);
+		}
+	}
+
+	/**
 	 * Draws a point in the plot
 	 * 
 	 * @param point the point to draw

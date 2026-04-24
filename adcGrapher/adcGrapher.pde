@@ -26,7 +26,7 @@ public int dataFileCount;  // Counts the files alredy loaded
 public boolean firstTimeStarted = true;
 
 /* Signals in*/
-public final int maxNumberOfAnalogSignals = 3;
+public final int maxNumberOfAnalogSignals = 4;
 public final int maxNumberOfDigitalSignals = 5;
 public AnalogSignal[] analogSignals = new AnalogSignal[maxNumberOfAnalogSignals];
 public DigitalSignal[] digitalSignals = new DigitalSignal[maxNumberOfDigitalSignals];
@@ -45,13 +45,14 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.09";
+final String swVersion = "0.10";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
 
 void settings() {
   size(1600, 800, PConstants.FX2D );
+  noSmooth();
 }
 
 void setup() {
@@ -63,6 +64,7 @@ void setup() {
   redirectConsole();
   
   // Set title bar and icon for Windows app
+  println("Ruta de ejecución: " + sketchPath());
   PImage titlebaricon = loadImage("data/icon.png"); 
   if (titlebaricon != null){
     surface.setIcon(titlebaricon);
@@ -96,11 +98,11 @@ public int plotMode = 0;
 
 long timer1 = 0;
 boolean focus = true;
-
+float drawTimeMs = 0;
 void draw() {
   
   background(255);  // clear the previus draw
-  
+  long t0 = System.nanoTime();  // for profile
   // Draw the Plots
   switch (plotMode) {
     
@@ -115,7 +117,7 @@ void draw() {
       /* Segun zoom aplicado dibujo capa de baja calidad */
       float[] xLim = plot1.getXLim();
       int qualy;
-      if(xLim[1] - xLim[0] < 3000)        
+      if(xLim[1] - xLim[0] < 1000)        
       {
         qualy = 0;   // full Res
       }
@@ -148,7 +150,12 @@ void draw() {
       /* Name of file*/
       textAlign(CENTER);
       fill(80);
-      text("File: " + dataFiles[0].getFileName(), width/2, height-10);
+      String files = "File: ";
+      for (int i = 0; i < dataFileCount-1 ; i++) {
+        files += dataFiles[i].getFileName() + ", ";
+      }
+      files += dataFiles[dataFileCount-1].getFileName();
+      text(files, width/2, height-10);
       
       /* Quality used to show */
       textAlign(RIGHT);
@@ -177,6 +184,8 @@ void draw() {
   }
   
   // Show information text arround the window
+  long t1 = System.nanoTime();
+  drawTimeMs = (t1 - t0) / 1e6;   // convertir a ms con decimales
   showInfoText();
 }
 
@@ -218,7 +227,7 @@ void showInfoText() {
   textAlign(LEFT);
   fill(150);
   if ( debug )
-    text("FPS: " + nf(frameRate, 0, 2) , 10 , 10);
+    text("FPS: " + nf(frameRate, 0, 2) + " (" + nf(drawTimeMs, 1, 3) + "ms)" , 10 , 10);
 }
 
 void loadingText() {
@@ -260,6 +269,9 @@ void plotSetConfig() {
   for(int i = 0; i < maxNumberOfDigitalSignals; i++) {
     digitalPlots[i] = new GPlot(this);
   }
+  
+  plot1.setFastDrawEnabled(true);
+  plot1.enableVBO();                          // Activar GPU
   
 }
 
@@ -343,17 +355,22 @@ void deleteFile () {
     dataFiles[i] = null;
  }
  
- plot1 = null;
- 
  /* Delete each analog signal */
   for(int signal = 0; signal < maxNumberOfAnalogSignals; signal++) {
-    if( analogSignals[signal] != null )  analogSignals[signal] = null;
+    if( analogSignals[signal] != null ) {
+      analogSignals[signal].dispose(); //<>//
+      analogSignals[signal] = null;
+    }
   }
       
   /* Delete each digital signal */
   for(int signal = 0; signal < maxNumberOfDigitalSignals; signal++) {
     if( digitalSignals[signal] != null )  digitalSignals[signal] = null;
   }
+  
+  plot1 = null;
+  
+  System.gc();
  
  plotMode = 0;
  dataFileCount = 0;

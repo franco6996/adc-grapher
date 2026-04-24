@@ -29,11 +29,15 @@ package grafica;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import processing.core.PApplet;
 import processing.core.PConstants;
 import processing.core.PFont;
 import processing.core.PImage;
 import processing.core.PShape;
+import processing.opengl.PGL;
+import processing.opengl.PGraphicsOpenGL;
 
 /**
  * Layer class. A GLayer usually contains an array of points and a histogram
@@ -77,6 +81,26 @@ public class GLayer implements PConstants {
 
 	// Helper variable
 	protected float[][] cuts = new float[4][2];
+
+	// Fast drawing cache (PShape) to render many points efficiently
+	protected transient PShape pointsPShape = null;
+	protected boolean fastDrawEnabled = false;
+	protected boolean pointsShapeDirty = true;
+   //vboDirty = true;
+
+	// VBO/GPU rendering for extreme performance with millions of points
+	protected boolean useVBO = false;
+	protected transient int vaoID = 0;
+	protected transient int vboID = 0;
+	protected transient int vertexCount = 0;
+	protected transient FloatBuffer vboBuffer = null;
+	protected boolean vboDirty = true;
+
+	// Lazy cache for inside list: avoid recalculating if viewport change is small
+	protected float[] lastXLim = null;
+	protected float[] lastYLim = null;
+	protected ArrayList<Boolean> cachedInside = null;
+	protected float insideListChangeThreshold = 0.02f; // 2% change triggers recalc
 
 	/**
 	 * GLayer constructor
@@ -264,6 +288,35 @@ public class GLayer implements PConstants {
 	}
 
 	/**
+	 * Converts a position in the plot reference system back to the original data values.
+	 *
+	 * @param xPlot x position in the plot reference system
+	 * @param yPlot y position in the plot reference system
+	 *
+	 * @return the (x, y) data values corresponding to the plot position
+	 */
+	public float[] plotToValue(float xPlot, float yPlot) {
+		float xVal;
+		float yVal;
+
+		if (xLog) {
+			float xScaling = dim[0] / PApplet.log(xLim[1] / xLim[0]);
+			xVal = xLim[0] * PApplet.exp(xPlot / xScaling);
+		} else {
+			xVal = xLim[0] + xPlot * (xLim[1] - xLim[0]) / dim[0];
+		}
+
+		if (yLog) {
+			float yScaling = -dim[1] / PApplet.log(yLim[1] / yLim[0]);
+			yVal = yLim[0] * PApplet.exp(yPlot / yScaling);
+		} else {
+			yVal = yLim[0] - yPlot * (yLim[1] - yLim[0]) / dim[1];
+		}
+
+		return new float[] { xVal, yVal };
+	}
+
+	/**
 	 * Updates the position of the layer points to the plot reference system
 	 */
 	protected void updatePlotPoints() {
@@ -313,55 +366,15 @@ public class GLayer implements PConstants {
 			plotPoints.setNPoints(nPoints);
 		}
 
+		// Mark cached shapes dirty
+		pointsShapeDirty = true;
+		vboDirty = true;
 	}
 
 	/**
 	 * Returns the plot x value at a given position in the plot reference system
 	 * 
 	 * @param xPlot x position in the plot reference system
-	 * 
-	 * @return the x values at the xPlot position
-	 */
-	protected float xPlotToValue(float xPlot) {
-		if (xLog) {
-			return PApplet.exp(PApplet.log(xLim[0]) + PApplet.log(xLim[1] / xLim[0]) * xPlot / dim[0]);
-		} else {
-			return xLim[0] + (xLim[1] - xLim[0]) * xPlot / dim[0];
-		}
-	}
-
-	/**
-	 * Returns the plot y value at a given position in the plot reference system
-	 * 
-	 * @param yPlot y position in the plot reference system
-	 * 
-	 * @return the y values at the yPlot position
-	 */
-	protected float yPlotToValue(float yPlot) {
-		if (yLog) {
-			return PApplet.exp(PApplet.log(yLim[0]) - PApplet.log(yLim[1] / yLim[0]) * yPlot / dim[1]);
-		} else {
-			return yLim[0] - (yLim[1] - yLim[0]) * yPlot / dim[1];
-		}
-	}
-
-	/**
-	 * Returns the plot values at a given position in the plot reference system
-	 * 
-	 * @param xPlot x position in the plot reference system
-	 * @param yPlot y position in the plot reference system
-	 * 
-	 * @return the (x, y) values at the (xPlot, yPlot) position
-	 */
-	public float[] plotToValue(float xPlot, float yPlot) {
-		return new float[] { xPlotToValue(xPlot), yPlotToValue(yPlot) };
-	}
-
-	/**
-	 * Checks if a given (xPlot, yPlot) position in the plot reference system is inside the layer limits
-	 * 
-	 * @param xPlot x position in the plot reference system
-	 * @param yPlot y position in the plot reference system
 	 * 
 	 * @return true if the (xPlot, yPlot) position is inside the layer limits
 	 */
@@ -785,6 +798,28 @@ public class GLayer implements PConstants {
 		int nColors = pointColors.length;
 		int nSizes = pointSizes.length;
 
+		// Update inside list with lazy caching
+		updateInsideListIfNeeded();
+
+		// Fast path: use VBO if enabled
+		if (useVBO && nColors == 1 && nSizes == 1) {
+			drawPointsVBO();
+			return;
+		}
+
+		// Fast path: if enabled and single color/size, use cached PShape
+		if (fastDrawEnabled && nColors == 1 && nSizes == 1) {
+			ensurePointsPShape();
+
+			if (pointsPShape != null) {
+				parent.pushStyle();
+				parent.shapeMode(CENTER);
+				parent.shape(pointsPShape);
+				parent.popStyle();
+				return;
+			}
+		}
+
 		parent.pushStyle();
 		parent.ellipseMode(CENTER);
 		parent.noStroke();
@@ -826,6 +861,201 @@ public class GLayer implements PConstants {
 		parent.popStyle();
 	}
 
+	/**
+	 * Enable or disable fast drawing using a cached PShape built from the
+	 * current `plotPoints`. When enabled, `drawPoints()` will use the cached
+	 * shape for the common case of single color and size.
+	 */
+	public void setFastDrawEnabled(boolean enabled) {
+		fastDrawEnabled = enabled;
+		if (!enabled) {
+			pointsPShape = null;
+		}
+		pointsShapeDirty = true;
+  vboDirty = true;
+	}
+
+	/**
+	 * Set the threshold (0-1) for lazy inside list updates.
+	 * Default 0.02 = 2%. Smaller = recalculate more often, larger = cache longer.
+	 */
+	public void setInsideListChangeThreshold(float threshold) {
+		insideListChangeThreshold = Math.max(0.001f, Math.min(threshold, 1.0f));
+	}
+
+	/**
+	 * Ensure the cached PShape is built and up-to-date.
+	 */
+	protected void ensurePointsPShape() {
+		if (!fastDrawEnabled) return;
+		if (!pointsShapeDirty && pointsPShape != null) return;
+
+		int nPoints = plotPoints.getNPoints();
+		if (nPoints == 0) {
+			pointsPShape = null;
+			pointsShapeDirty = false;
+			return;
+		}
+
+		// Use POINTS primitive for efficient vertex-only storage
+		PShape s = parent.createShape();
+		s.beginShape(POINTS);
+		s.noFill();
+		s.stroke(pointColors[0]);
+		s.strokeWeight(pointSizes[0]);
+
+		for (int i = 0; i < nPoints; i++) {
+			if (inside.get(i) && plotPoints.isValid(i)) {
+				s.vertex(plotPoints.getX(i), plotPoints.getY(i));
+			}
+		}
+
+		s.endShape();
+
+		pointsPShape = s;
+		pointsShapeDirty = false;
+	}
+
+	/**
+	 * Initialize VBO for GPU rendering. Call this once after loading large datasets
+	 * to move vertex data to GPU memory. Dramatically improves performance for pan/zoom.
+	 */
+	public void initVBO() {
+		if (!useVBO) {
+			useVBO = true;
+		}
+		vboDirty = true;
+	}
+
+	/**
+	 * Build/rebuild the VBO with current plot points. Called lazily when drawing.
+	 */
+	protected void ensureVBO() {
+		if (!useVBO) return;
+		if (!vboDirty && vboID != 0) return;
+
+		int nPoints = plotPoints.getNPoints();
+		if (nPoints == 0) {
+			vboDirty = false;
+			return;
+		}
+
+		// Prepare vertex data (only coordinates, no colors for now - can extend)
+		if (vboBuffer == null || vboBuffer.capacity() < nPoints * 2) {
+			vboBuffer = FloatBuffer.allocate(nPoints * 2);
+		} else {
+			vboBuffer.clear();
+		}
+
+		for (int i = 0; i < nPoints; i++) {
+			if (inside.get(i) && plotPoints.isValid(i)) {
+				vboBuffer.put(plotPoints.getX(i));
+				vboBuffer.put(plotPoints.getY(i));
+			}
+		}
+
+		vboBuffer.flip();
+		vertexCount = vboBuffer.position() / 2;
+
+		// Upload to GPU
+		if (parent.g instanceof PGraphicsOpenGL) {
+			PGraphicsOpenGL pgl = (PGraphicsOpenGL) parent.g;
+			PGL gl = pgl.pgl;
+
+			if (vboID == 0) {
+				IntBuffer ids = IntBuffer.allocate(1);
+				gl.genBuffers(1, ids);
+				ids.rewind();
+				vboID = ids.get(0);
+			}
+
+			gl.bindBuffer(PGL.ARRAY_BUFFER, vboID);
+			gl.bufferData(PGL.ARRAY_BUFFER, vboBuffer.limit() * 4, vboBuffer, PGL.DYNAMIC_DRAW);
+			gl.bindBuffer(PGL.ARRAY_BUFFER, 0);
+		}
+
+		vboDirty = false;
+	}
+
+	/**
+	 * Draw points using VBO if available and enabled. Falls back to CPU rendering.
+	 */
+	protected void drawPointsVBO() {
+		if (!useVBO || vboID == 0) {
+			drawPoints(); // Fallback
+			return;
+		}
+
+		ensureVBO();
+
+		if (parent.g instanceof PGraphicsOpenGL) {
+			PGraphicsOpenGL pgl = (PGraphicsOpenGL) parent.g;
+			PGL gl = pgl.pgl;
+
+			parent.pushStyle();
+			parent.noStroke();
+			parent.fill(pointColors[0]);
+
+			gl.bindBuffer(PGL.ARRAY_BUFFER, vboID);
+			gl.vertexAttribPointer(0, 2, PGL.FLOAT, false, 8, 0);
+			gl.enableVertexAttribArray(0);
+
+			// Draw all vertices at once
+			gl.drawArrays(PGL.POINTS, 0, vertexCount);
+
+			gl.disableVertexAttribArray(0);
+			gl.bindBuffer(PGL.ARRAY_BUFFER, 0);
+
+			parent.popStyle();
+		} else {
+			// Fallback for non-OpenGL renderers
+			drawPoints();
+		}
+	}
+
+	/**
+	 * Update inside list only if viewport has changed significantly.
+	 * Uses lazy evaluation to avoid recalculating for small pan/zoom operations.
+	 */
+	protected void updateInsideListIfNeeded() {
+		boolean needsUpdate = false;
+
+		// Check if this is the first time or if cache doesn't exist
+		if (lastXLim == null || lastYLim == null || cachedInside == null) {
+			needsUpdate = true;
+		} else {
+			// Check if viewport changed more than threshold
+			float xRange = Math.abs(lastXLim[1] - lastXLim[0]);
+			float yRange = Math.abs(lastYLim[1] - lastYLim[0]);
+
+			float xChange = Math.max(
+				Math.abs(xLim[0] - lastXLim[0]) / (xRange + 1e-6f),
+				Math.abs(xLim[1] - lastXLim[1]) / (xRange + 1e-6f)
+			);
+
+			float yChange = Math.max(
+				Math.abs(yLim[0] - lastYLim[0]) / (yRange + 1e-6f),
+				Math.abs(yLim[1] - lastYLim[1]) / (yRange + 1e-6f)
+			);
+
+			if (xChange > insideListChangeThreshold || yChange > insideListChangeThreshold) {
+				needsUpdate = true;
+			}
+		}
+
+		if (needsUpdate) {
+			updateInsideList();
+			// Cache the current limits
+			lastXLim = xLim.clone();
+			lastYLim = yLim.clone();
+			cachedInside = new ArrayList<Boolean>(inside);
+		} else if (cachedInside != null) {
+			// Restore from cache
+			inside.clear();
+			inside.addAll(cachedInside);
+		}
+	}
+
   /**
    * Draws the points inside the layer limits only having into account the points from index A to B improving drawing efficiency
    */
@@ -835,50 +1065,74 @@ public class GLayer implements PConstants {
     int nSizes = pointSizes.length;
     
     indexA = indexA < 0 ? 0 : indexA;
-    indexB = indexB < indexA ? nPoints : indexB;
-    indexB = indexB >= plotPoints.getNPoints() ? nPoints : indexB+1;
+		indexB = indexB < indexA ? nPoints : indexB;
+		indexB = indexB >= plotPoints.getNPoints() ? nPoints : indexB+1;
+		updateInsideList();
     
-    updateInsideList();
+		// Fast path: use VBO if enabled and full-range requested
+		if (useVBO && nColors == 1 && nSizes == 1 && indexA == 0 && indexB >= nPoints) {
+			drawPointsVBO();
+			return;
+		}
 
-    parent.pushStyle();
-    parent.ellipseMode(CENTER);
-    parent.noStroke();
+		// Full-range cached PShape fast path
+		if (fastDrawEnabled && nColors == 1 && nSizes == 1 && indexA == 0 && indexB >= nPoints) {
+			ensurePointsPShape();
+			if (pointsPShape != null) {
+				parent.pushStyle();
+				parent.shapeMode(CENTER);
+				parent.shape(pointsPShape);
+				parent.popStyle();
+				return;
+			}
+		}
 
-    if (nColors == 1 && nSizes == 1) {
-      parent.fill(pointColors[0]);
+		parent.pushStyle();
 
-      for (int i = indexA; i < indexB; i++) {
-        if (inside.get(i)) {
-          parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[0], pointSizes[0]);
-        }
-      }
-    } else if (nColors == 1) {
-      parent.fill(pointColors[0]);
+		// Batch drawing for uniform color/size using POINTS (fewer draw calls)
+		if (nColors == 1 && nSizes == 1) {
+			parent.noFill();
+			parent.stroke(pointColors[0]);
+			parent.strokeWeight(pointSizes[0]);
 
-      for (int i = indexA; i < indexB; i++) {
-        if (inside.get(i)) {
-          parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[i % nSizes],
-              pointSizes[i % nSizes]);
-        }
-      }
-    } else if (nSizes == 1) {
-      for (int i = indexA; i < indexB; i++) {
-        if (inside.get(i)) {
-          parent.fill(pointColors[i % nColors]);
-          parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[0], pointSizes[0]);
-        }
-      }
-    } else {
-      for (int i = indexA; i < indexB; i++) {
-        if (inside.get(i)) {
-          parent.fill(pointColors[i % nColors]);
-          parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[i % nSizes],
-              pointSizes[i % nSizes]);
-        }
-      }
-    }
+			parent.beginShape(POINTS);
+			for (int i = indexA; i < indexB; i++) {
+				if (inside.get(i) && plotPoints.isValid(i)) {
+					parent.vertex(plotPoints.getX(i), plotPoints.getY(i));
+				}
+			}
+			parent.endShape();
 
-    parent.popStyle();
+		} else {
+			// Fallback: per-point drawing when color/size vary
+			parent.ellipseMode(CENTER);
+			parent.noStroke();
+
+			if (nColors == 1) {
+				parent.fill(pointColors[0]);
+				for (int i = indexA; i < indexB; i++) {
+					if (inside.get(i) && plotPoints.isValid(i)) {
+						parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[i % nSizes], pointSizes[i % nSizes]);
+					}
+				}
+			} else if (nSizes == 1) {
+				for (int i = indexA; i < indexB; i++) {
+					if (inside.get(i) && plotPoints.isValid(i)) {
+						parent.fill(pointColors[i % nColors]);
+						parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[0], pointSizes[0]);
+					}
+				}
+			} else {
+				for (int i = indexA; i < indexB; i++) {
+					if (inside.get(i) && plotPoints.isValid(i)) {
+						parent.fill(pointColors[i % nColors]);
+						parent.ellipse(plotPoints.getX(i), plotPoints.getY(i), pointSizes[i % nSizes], pointSizes[i % nSizes]);
+					}
+				}
+			}
+		}
+
+		parent.popStyle();
   }
 
 	/**
@@ -1074,26 +1328,46 @@ public class GLayer implements PConstants {
     indexA = indexA < 0 ? 0 : indexA;
     indexB = indexB <=indexA ? (plotPoints.getNPoints() - 1) : indexB;
     indexB = indexB >= plotPoints.getNPoints() ? (plotPoints.getNPoints() - 1) : indexB;
-    
-    for (int i = indexA; i < indexB; i++) {
-      if (inside.get(i) && inside.get(i + 1)) {
-        parent.line(plotPoints.getX(i), plotPoints.getY(i), plotPoints.getX(i + 1), plotPoints.getY(i + 1));
-      } else if ( drawOutOfTheBox && plotPoints.isValid(i) && plotPoints.isValid(i + 1) ) {
-        // At least one of the points is outside the inner region.
-        // Obtain the valid line box intersections
-        
-        int nCuts = obtainBoxIntersections(plotPoints.get(i), plotPoints.get(i + 1));
-        if (inside.get(i)) {
-          parent.line(plotPoints.getX(i), plotPoints.getY(i), cuts[0][0], cuts[0][1]);
-        } else if (inside.get(i + 1)) {
-          parent.line(cuts[0][0], cuts[0][1], plotPoints.getX(i + 1), plotPoints.getY(i + 1));
-        } else if (nCuts >= 2) {
-          parent.line(cuts[0][0], cuts[0][1], cuts[1][0], cuts[1][1]);
-        }
+		// Draw contiguous visible runs as a single LINE_STRIP to reduce GL calls
+		boolean inStrip = false;
+		for (int i = indexA; i < indexB; i++) {
+			boolean validA = plotPoints.isValid(i);
+			boolean validB = plotPoints.isValid(i + 1);
 
-      }
+			if (inside.get(i) && inside.get(i + 1) && validA && validB) {
+				if (!inStrip) {
+					parent.beginShape();
+					inStrip = true;
+					// start the strip with point i
+					parent.vertex(plotPoints.getX(i), plotPoints.getY(i));
+				}
 
-    }
+				// add the next vertex (i+1) to the strip
+				parent.vertex(plotPoints.getX(i + 1), plotPoints.getY(i + 1));
+			} else {
+				// close any open strip
+				if (inStrip) {
+					parent.endShape();
+					inStrip = false;
+				}
+
+				// If requested, draw clipped segments that intersect the box
+				if (drawOutOfTheBox && validA && validB) {
+					int nCuts = obtainBoxIntersections(plotPoints.get(i), plotPoints.get(i + 1));
+					if (inside.get(i)) {
+						parent.line(plotPoints.getX(i), plotPoints.getY(i), cuts[0][0], cuts[0][1]);
+					} else if (inside.get(i + 1)) {
+						parent.line(cuts[0][0], cuts[0][1], plotPoints.getX(i + 1), plotPoints.getY(i + 1));
+					} else if (nCuts >= 2) {
+						parent.line(cuts[0][0], cuts[0][1], cuts[1][0], cuts[1][1]);
+					}
+				}
+			}
+		}
+
+		if (inStrip) {
+			parent.endShape();
+		}
 
     parent.popStyle();
   }
@@ -2073,6 +2347,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.setPlotPoints(plotPoints);
 		}
+
+		pointsShapeDirty = true;
+		vboDirty = true;
 	}
 
 	/**
@@ -2091,6 +2368,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.setPlotPoint(index, plotPoints.get(index));
 		}
+
+		pointsShapeDirty = true;
+		vboDirty = true;
 	}
 
 	/**
@@ -2112,6 +2392,8 @@ public class GLayer implements PConstants {
 	 */
 	public void setPoint(int index, GPoint newPoint) {
 		setPoint(index, newPoint.getX(), newPoint.getY(), newPoint.getLabel());
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2129,6 +2411,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.addPlotPoint(plotPoints.getLastPoint());
 		}
+
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2139,6 +2424,8 @@ public class GLayer implements PConstants {
 	 */
 	public void addPoint(float x, float y) {
 		addPoint(x, y, "");
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2148,6 +2435,8 @@ public class GLayer implements PConstants {
 	 */
 	public void addPoint(GPoint newPoint) {
 		addPoint(newPoint.getX(), newPoint.getY(), newPoint.getLabel());
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2166,6 +2455,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.addPlotPoint(index, plotPoints.get(index));
 		}
+
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2177,6 +2469,8 @@ public class GLayer implements PConstants {
 	 */
 	public void addPoint(int index, float x, float y) {
 		addPoint(index, x, y, "");
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2187,6 +2481,8 @@ public class GLayer implements PConstants {
 	 */
 	public void addPoint(int index, GPoint newPoint) {
 		addPoint(index, newPoint.getX(), newPoint.getY(), newPoint.getLabel());
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2204,6 +2500,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.setPlotPoints(plotPoints);
 		}
+
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2219,6 +2518,9 @@ public class GLayer implements PConstants {
 		if (hist != null) {
 			hist.removePlotPoint(index);
 		}
+
+		pointsShapeDirty = true;
+  vboDirty = true;
 	}
 
 	/**
@@ -2532,5 +2834,19 @@ public class GLayer implements PConstants {
 	 */
 	public GHistogram getHistogram() {
 		return hist;
+	}
+
+	/**
+	 * Get current inside list change threshold for lazy evaluation.
+	 */
+	public float getInsideListChangeThreshold() {
+		return insideListChangeThreshold;
+	}
+
+	/**
+	 * Check if VBO rendering is enabled.
+	 */
+	public boolean isVBOEnabled() {
+		return useVBO;
 	}
 }
