@@ -1,0 +1,2 @@
+Luego de haber exportado la aplicación, para cambiar el icono abrir el .exe con ResourceHacker, ir a 'Icon Group' y darle a reemplazar por el icono de la app.
+Guardar los cambios.

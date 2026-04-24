@@ -45,7 +45,7 @@ final int plotToX = 680;
 final int plotToY = 680;
 
 // Define the version SW
-final String swVersion = "0.09";
+final String swVersion = "0.10";
 boolean debug = true;
 
 public PImage imgConfig, imgDelete, imgExport, imgAdd, imgM;
@@ -64,6 +64,7 @@ void setup() {
   redirectConsole();
   
   // Set title bar and icon for Windows app
+  println("Ruta de ejecución: " + sketchPath());
   PImage titlebaricon = loadImage("data/icon.png"); 
   if (titlebaricon != null){
     surface.setIcon(titlebaricon);
